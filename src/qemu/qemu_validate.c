@@ -1220,12 +1220,30 @@ qemuValidateDomainDef(const virDomainDef *def,
     if (qemuValidateDomainDefPanic(def, qemuCaps) < 0)
         return -1;
 
-    if (def->sev &&
-        !virQEMUCapsGet(qemuCaps, QEMU_CAPS_SEV_GUEST)) {
-        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
-                       _("SEV launch security is not supported with "
-                         "this QEMU binary"));
-        return -1;
+    if (def->ls) {
+        switch ((virDomainLaunchSecurity) def->ls->type) {
+        case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+            if (def->ls->data.sev &&
+                !virQEMUCapsGet(qemuCaps, QEMU_CAPS_SEV_GUEST)) {
+                    virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                                   _("SEV launch security is not supported with "
+                                     "this QEMU binary"));
+                    return -1;
+                }
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+            if (def->ls->data.tdx &&
+                !virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST)) {
+                    virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                                   _("TDX launch security is not supported with "
+                                     "this QEMU binary"));
+                    return -1;
+                }
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+        case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+            break;
+        }
     }
 
     return 0;

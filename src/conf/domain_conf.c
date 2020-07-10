@@ -1349,6 +1349,7 @@ VIR_ENUM_IMPL(virDomainLaunchSecurity,
               VIR_DOMAIN_LAUNCH_SECURITY_LAST,
               "",
               "sev",
+              "tdx",
 );
 
 static virClassPtr virDomainObjClass;
@@ -3434,6 +3435,38 @@ virDomainSEVDefFree(virDomainSEVDefPtr def)
     g_free(def);
 }
 
+static void
+virDomainTDXDefFree(virDomainTDXDefPtr def)
+{
+    if (!def)
+        return;
+
+    g_free(def->cert);
+    g_free(def->key_server);
+
+    g_free(def);
+}
+
+static void
+virDomainLaunchSecurityDefFree(virDomainLaunchSecurityDefPtr def)
+{
+    if (!def)
+        return;
+
+    switch ((virDomainLaunchSecurity) def->type) {
+    case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+        virDomainSEVDefFree(def->data.sev);
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        virDomainTDXDefFree(def->data.tdx);
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+    case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+        break;
+    }
+
+    g_free(def);
+}
 
 void virDomainDefFree(virDomainDefPtr def)
 {
@@ -3626,7 +3659,7 @@ void virDomainDefFree(virDomainDefPtr def)
     if (def->namespaceData && def->ns.free)
         (def->ns.free)(def->namespaceData);
 
-    virDomainSEVDefFree(def->sev);
+    virDomainLaunchSecurityDefFree(def->ls);
 
     xmlFreeNode(def->metadata);
 
@@ -15484,37 +15517,13 @@ virDomainMemoryTargetDefParseXML(xmlNodePtr node,
 
 
 static virDomainSEVDefPtr
-virDomainSEVDefParseXML(xmlNodePtr sevNode,
-                        xmlXPathContextPtr ctxt)
+virDomainSEVDefParseXML(xmlXPathContextPtr ctxt)
 {
-    VIR_XPATH_NODE_AUTORESTORE(ctxt)
     virDomainSEVDefPtr def;
     unsigned long policy;
-    g_autofree char *type = NULL;
     int rc = -1;
 
     def = g_new0(virDomainSEVDef, 1);
-
-    ctxt->node = sevNode;
-
-    if (!(type = virXMLPropString(sevNode, "type"))) {
-        virReportError(VIR_ERR_XML_ERROR, "%s",
-                       _("missing launch security type"));
-        goto error;
-    }
-
-    def->sectype = virDomainLaunchSecurityTypeFromString(type);
-    switch ((virDomainLaunchSecurity) def->sectype) {
-    case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
-        break;
-    case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
-    case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
-    default:
-        virReportError(VIR_ERR_XML_ERROR,
-                       _("unsupported launch security type '%s'"),
-                       type);
-        goto error;
-    }
 
     if (virXPathULongHex("string(./policy)", ctxt, &policy) < 0) {
         virReportError(VIR_ERR_XML_ERROR, "%s",
@@ -15553,6 +15562,75 @@ virDomainSEVDefParseXML(xmlNodePtr sevNode,
 
  error:
     virDomainSEVDefFree(def);
+    return NULL;
+}
+
+
+static virDomainTDXDefPtr
+virDomainTDXDefParseXML(xmlXPathContextPtr ctxt)
+{
+    virDomainTDXDefPtr def;
+    unsigned long policy;
+
+    def = g_new0(virDomainTDXDef, 1);
+
+    if (virXPathULongHex("string(./policy)", ctxt, &policy) < 0) {
+        virReportError(VIR_ERR_XML_ERROR, "%s",
+                       _("failed to get tdx launch security policy"));
+        goto error;
+    }
+
+    def->policy = policy;
+    def->cert = virXPathString("string(./cert)", ctxt);
+    def->key_server = virXPathString("string(./keyServer)", ctxt);
+
+    return def;
+
+ error:
+    virDomainTDXDefFree(def);
+    return NULL;
+}
+
+
+static virDomainLaunchSecurityDefPtr
+virDomainLaunchSecurityDefParseXML(xmlNodePtr node,
+                                   xmlXPathContextPtr ctxt)
+{
+    VIR_XPATH_NODE_AUTORESTORE(ctxt)
+    g_autofree char *type = NULL;
+    virDomainLaunchSecurityDefPtr ls;
+    ctxt->node = node;
+
+    ls = g_new0(virDomainLaunchSecurityDef, 1);
+
+    if (!(type = virXMLPropString(node, "type"))) {
+        virReportError(VIR_ERR_XML_ERROR, "%s",
+                       _("missing launch security type"));
+        goto error;
+    }
+
+    ls->type = virDomainLaunchSecurityTypeFromString(type);
+    switch ((virDomainLaunchSecurity) ls->type) {
+    case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+        if ((ls->data.sev = virDomainSEVDefParseXML(ctxt)) == NULL)
+            goto error;
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        if ((ls->data.tdx = virDomainTDXDefParseXML(ctxt)) == NULL)
+            goto error;
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+    case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+    default:
+        virReportError(VIR_ERR_XML_ERROR,
+                       _("unsupported launch security type '%s'"),
+                       type);
+        goto error;
+    }
+    return ls;
+
+ error:
+    virDomainLaunchSecurityDefFree(ls);
     return NULL;
 }
 
@@ -21133,11 +21211,14 @@ virDomainDefParseXML(xmlDocPtr xml,
     ctxt->node = node;
     VIR_FREE(nodes);
 
-    /* Check for SEV feature */
+    /* Check for security model, tdx and sev are supported */
     if ((node = virXPathNode("./launchSecurity", ctxt)) != NULL) {
-        def->sev = virDomainSEVDefParseXML(node, ctxt);
-        if (!def->sev)
+        virDomainLaunchSecurityDefPtr ls =
+            virDomainLaunchSecurityDefParseXML(node, ctxt);
+        if (!ls)
             goto error;
+
+        def->ls = ls;
     }
 
     /* analysis of memory devices */
@@ -27688,7 +27769,7 @@ virDomainSEVDefFormat(virBufferPtr buf, virDomainSEVDefPtr sev)
         return;
 
     virBufferAsprintf(buf, "<launchSecurity type='%s'>\n",
-                      virDomainLaunchSecurityTypeToString(sev->sectype));
+                      virDomainLaunchSecurityTypeToString(VIR_DOMAIN_LAUNCH_SECURITY_SEV));
     virBufferAdjustIndent(buf, 2);
 
     if (sev->haveCbitpos)
@@ -27708,6 +27789,45 @@ virDomainSEVDefFormat(virBufferPtr buf, virDomainSEVDefPtr sev)
     virBufferAddLit(buf, "</launchSecurity>\n");
 }
 
+static void
+virDomainTDXDefFormat(virBufferPtr buf, virDomainTDXDefPtr tdx)
+{
+    if (!tdx)
+        return;
+
+    virBufferAsprintf(buf, "<launchSecurity type='%s'>\n",
+                      virDomainLaunchSecurityTypeToString(VIR_DOMAIN_LAUNCH_SECURITY_TDX));
+    virBufferAdjustIndent(buf, 2);
+
+    virBufferAsprintf(buf, "<policy>0x%04x</policy>\n", tdx->policy);
+    if (tdx->cert)
+        virBufferEscapeString(buf, "<cert>%s</cert>\n", tdx->cert);
+
+    if (tdx->key_server)
+        virBufferEscapeString(buf, "<keyServer>%s</keyServer>\n", tdx->key_server);
+
+    virBufferAdjustIndent(buf, -2);
+    virBufferAddLit(buf, "</launchSecurity>\n");
+}
+
+static void
+virDomainLaunchSecurityDefFormat(virBufferPtr buf, virDomainLaunchSecurityDefPtr ls)
+{
+    if (!ls)
+        return;
+
+    switch ((virDomainLaunchSecurity) ls->type) {
+    case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+        virDomainSEVDefFormat(buf, ls->data.sev);
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        virDomainTDXDefFormat(buf, ls->data.tdx);
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+    case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+        break;
+    }
+}
 
 static void
 virDomainPerfDefFormat(virBufferPtr buf, virDomainPerfDefPtr perf)
@@ -29128,7 +29248,7 @@ virDomainDefFormatInternalSetRootName(virDomainDefPtr def,
     if (def->keywrap)
         virDomainKeyWrapDefFormat(buf, def->keywrap);
 
-    virDomainSEVDefFormat(buf, def->sev);
+    virDomainLaunchSecurityDefFormat(buf, def->ls);
 
     if (def->namespaceData && def->ns.format) {
         if ((def->ns.format)(buf, def->namespaceData) < 0)

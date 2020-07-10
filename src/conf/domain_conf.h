@@ -2497,13 +2497,13 @@ struct _virDomainKeyWrapDef {
 typedef enum {
     VIR_DOMAIN_LAUNCH_SECURITY_NONE,
     VIR_DOMAIN_LAUNCH_SECURITY_SEV,
+    VIR_DOMAIN_LAUNCH_SECURITY_TDX,
 
     VIR_DOMAIN_LAUNCH_SECURITY_LAST,
 } virDomainLaunchSecurity;
 
 
 struct _virDomainSEVDef {
-    int sectype; /* enum virDomainLaunchSecurity */
     char *dh_cert;
     char *session;
     unsigned int policy;
@@ -2513,6 +2513,19 @@ struct _virDomainSEVDef {
     unsigned int reduced_phys_bits;
 };
 
+struct _virDomainTDXDef {
+    char *cert;
+    char *key_server;
+    unsigned int policy;
+};
+
+struct _virDomainLaunchSecurityDef {
+    int type; /* enum virDomainLaunchSecurity */
+    union {
+        virDomainTDXDefPtr tdx;
+        virDomainSEVDefPtr sev;
+    } data;
+};
 
 typedef enum {
     VIR_DOMAIN_IOMMU_MODEL_INTEL,
@@ -2723,8 +2736,8 @@ struct _virDomainDef {
 
     virDomainKeyWrapDefPtr keywrap;
 
-    /* SEV-specific domain */
-    virDomainSEVDefPtr sev;
+    /* Security VM domain */
+    virDomainLaunchSecurityDefPtr ls;
 
     /* Application-specific custom metadata */
     xmlNodePtr metadata;

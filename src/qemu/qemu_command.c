@@ -6980,7 +6980,8 @@ qemuBuildMachineCommandLine(virCommandPtr cmd,
     if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_LOADPARM))
         qemuAppendLoadparmMachineParm(&buf, def);
 
-    if (def->sev)
+    if (def->ls && def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV &&
+        def->ls->data.sev)
         virBufferAddLit(&buf, ",memory-encryption=sev0");
 
     if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_BLOCKDEV)) {
@@ -10087,7 +10088,7 @@ qemuBuildCommandLine(virQEMUDriverPtr driver,
     if (qemuBuildVMCoreInfoCommandLine(cmd, def) < 0)
         return NULL;
 
-    if (qemuBuildSEVCommandLine(vm, cmd, def->sev) < 0)
+    if (qemuBuildSEVCommandLine(vm, cmd, def->ls->data.sev) < 0)
         return NULL;
 
     if (snapshot)

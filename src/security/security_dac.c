@@ -1978,7 +1978,7 @@ virSecurityDACRestoreAllLabel(virSecurityManagerPtr mgr,
             rc = -1;
     }
 
-    if (def->sev) {
+    if (def->ls && def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV && def->ls->data.sev) {
         if (virSecurityDACRestoreSEVLabel(mgr, def) < 0)
             rc = -1;
     }
@@ -2185,7 +2185,7 @@ virSecurityDACSetAllLabel(virSecurityManagerPtr mgr,
             return -1;
     }
 
-    if (def->sev) {
+    if (def->ls && def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV && def->ls->data.sev) {
         if (virSecurityDACSetSEVLabel(mgr, def) < 0)
             return -1;
     }

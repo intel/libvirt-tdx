@@ -594,9 +594,9 @@ static int
 qemuDomainSetupLaunchSecurity(virDomainObjPtr vm,
                               GSList **paths)
 {
-    virDomainSEVDefPtr sev = vm->def->sev;
+    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
 
-    if (!sev || sev->sectype != VIR_DOMAIN_LAUNCH_SECURITY_SEV)
+    if (!ls || ls->type != VIR_DOMAIN_LAUNCH_SECURITY_SEV || !ls->data.sev)
         return 0;
 
     VIR_DEBUG("Setting up launch security");

@@ -6365,7 +6365,8 @@ qemuProcessUpdateSEVInfo(virDomainObjPtr vm)
 {
     qemuDomainObjPrivatePtr priv = vm->privateData;
     virQEMUCapsPtr qemuCaps = priv->qemuCaps;
-    virDomainSEVDefPtr sev = vm->def->sev;
+    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
+    virDomainSEVDefPtr sev = ls->data.sev;
     virSEVCapabilityPtr sevCaps = NULL;
 
     /* if platform specific info like 'cbitpos' and 'reducedPhysBits' have
@@ -6521,7 +6522,9 @@ qemuProcessPrepareDomain(virQEMUDriverPtr driver,
     for (i = 0; i < vm->def->nshmems; i++)
         qemuDomainPrepareShmemChardev(vm->def->shmems[i]);
 
-    if (vm->def->sev) {
+    if (vm->def->ls &&
+        vm->def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV &&
+        vm->def->ls->data.sev) {
         VIR_DEBUG("Updating SEV platform info");
         if (qemuProcessUpdateSEVInfo(vm) < 0)
             return -1;
@@ -6559,9 +6562,10 @@ qemuProcessSEVCreateFile(virDomainObjPtr vm,
 static int
 qemuProcessPrepareSEVGuestInput(virDomainObjPtr vm)
 {
-    virDomainSEVDefPtr sev = vm->def->sev;
+    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
+    virDomainSEVDefPtr sev = ls->data.sev;
 
-    if (!sev)
+    if (!ls || ls->type != VIR_DOMAIN_LAUNCH_SECURITY_SEV || !sev)
         return 0;
 
     VIR_DEBUG("Preparing SEV guest");

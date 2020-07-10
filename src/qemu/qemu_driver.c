@@ -19764,15 +19764,17 @@ qemuDomainGetLaunchSecurityInfo(virDomainPtr domain,
 {
     virQEMUDriverPtr driver = domain->conn->privateData;
     virDomainObjPtr vm;
+    virDomainLaunchSecurityDefPtr ls;
     int ret = -1;
 
     if (!(vm = qemuDomainObjFromDomain(domain)))
         goto cleanup;
+    ls = vm->def->ls;
 
     if (virDomainGetLaunchSecurityInfoEnsureACL(domain->conn, vm->def) < 0)
         goto cleanup;
 
-    if (vm->def->sev) {
+    if (ls && ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV && ls->data.sev) {
         if (qemuDomainGetSEVMeasurement(driver, vm, params, nparams, flags) < 0)
             goto cleanup;
     }
