@@ -6980,9 +6980,19 @@ qemuBuildMachineCommandLine(virCommandPtr cmd,
     if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_LOADPARM))
         qemuAppendLoadparmMachineParm(&buf, def);
 
-    if (def->ls && def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_SEV &&
-        def->ls->data.sev)
-        virBufferAddLit(&buf, ",memory-encryption=sev0");
+    if (def->ls) {
+        switch ((virDomainLaunchSecurity) def->ls->type) {
+        case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+            virBufferAddLit(&buf, ",memory-encryption=sev0");
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+            virBufferAddLit(&buf, ",memory-encryption=tdx,kvm-type=tdx,pit=off");
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+        case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+            break;
+        }
+    }
 
     if (virQEMUCapsGet(qemuCaps, QEMU_CAPS_BLOCKDEV)) {
         if (priv->pflash0)
@@ -9220,6 +9230,13 @@ qemuBuildDomainLoaderCommandLine(virCommandPtr cmd,
     if (!loader)
         return;
 
+    /* Force the generic loader currently */
+    if (def->ls && def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_TDX && def->ls->data.tdx) {
+        virCommandAddArg(cmd, "-device");
+        virCommandAddArgFormat(cmd, "loader,file=%s,id=fd0", loader->path);
+        return;
+    }
+
     switch ((virDomainLoader) loader->type) {
     case VIR_DOMAIN_LOADER_TYPE_ROM:
         virCommandAddArg(cmd, "-bios");
@@ -9460,6 +9477,41 @@ qemuBuildSEVCommandLine(virDomainObjPtr vm, virCommandPtr cmd,
     if (sev->session) {
         path = g_strdup_printf("%s/session.base64", priv->libDir);
         virBufferAsprintf(&buf, ",session-file=%s", path);
+        VIR_FREE(path);
+    }
+
+    virCommandAddArg(cmd, "-object");
+    virCommandAddArgBuffer(cmd, &buf);
+    return 0;
+}
+
+static int
+qemuBuildTDXCommandLine(virDomainObjPtr vm, virCommandPtr cmd,
+                        virDomainTDXDefPtr tdx)
+{
+    g_auto(virBuffer) buf = VIR_BUFFER_INITIALIZER;
+    qemuDomainObjPrivatePtr priv = vm->privateData;
+    char *path = NULL;
+
+    if (!tdx)
+        return 0;
+
+    VIR_DEBUG("policy=0x%x", tdx->policy);
+
+    if (tdx->policy)
+        virBufferAsprintf(&buf, "tdx-guest,id=tdx,policy=0x%x", tdx->policy);
+    else
+        virBufferAddLit(&buf, "tdx-guest,id=tdx");
+
+    if (tdx->cert) {
+        path = g_strdup_printf("%s/cert", priv->libDir);
+        virBufferAsprintf(&buf, ",cert-file=%s", path);
+        VIR_FREE(path);
+    }
+
+    if (tdx->key_server) {
+        path = g_strdup_printf("%s/key_server", priv->libDir);
+        virBufferAsprintf(&buf, ",key-server-file=%s", path);
         VIR_FREE(path);
     }
 
@@ -10088,8 +10140,21 @@ qemuBuildCommandLine(virQEMUDriverPtr driver,
     if (qemuBuildVMCoreInfoCommandLine(cmd, def) < 0)
         return NULL;
 
-    if (qemuBuildSEVCommandLine(vm, cmd, def->ls->data.sev) < 0)
-        return NULL;
+    if (def->ls) {
+        switch ((virDomainLaunchSecurity) def->ls->type) {
+        case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+            if (qemuBuildSEVCommandLine(vm, cmd, def->ls->data.sev) < 0)
+                return NULL;
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+            if (qemuBuildTDXCommandLine(vm, cmd, def->ls->data.tdx) < 0)
+                return NULL;
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+        case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+            break;
+        }
+    }
 
     if (snapshot)
         virCommandAddArgList(cmd, "-loadvm", snapshot->def->name, NULL);

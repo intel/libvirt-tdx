@@ -6535,15 +6535,16 @@ qemuProcessPrepareDomain(virQEMUDriverPtr driver,
 
 
 static int
-qemuProcessSEVCreateFile(virDomainObjPtr vm,
+qemuProcessLaunchSecurityCreateFile(virDomainObjPtr vm,
                          const char *name,
-                         const char *data)
+                         const char *data,
+                         const char *ext)
 {
     qemuDomainObjPrivatePtr priv = vm->privateData;
     virQEMUDriverPtr driver = priv->driver;
     g_autofree char *configFile = NULL;
 
-    if (!(configFile = virFileBuildPath(priv->libDir, name, ".base64")))
+    if (!(configFile = virFileBuildPath(priv->libDir, name, ext)))
         return -1;
 
     if (virFileRewriteStr(configFile, S_IRUSR | S_IWUSR, data) < 0) {
@@ -6571,13 +6572,69 @@ qemuProcessPrepareSEVGuestInput(virDomainObjPtr vm)
     VIR_DEBUG("Preparing SEV guest");
 
     if (sev->dh_cert) {
-        if (qemuProcessSEVCreateFile(vm, "dh_cert", sev->dh_cert) < 0)
+        if (qemuProcessLaunchSecurityCreateFile(vm, "dh_cert", sev->dh_cert, ".base64") < 0)
             return -1;
     }
 
     if (sev->session) {
-        if (qemuProcessSEVCreateFile(vm, "session", sev->session) < 0)
+        if (qemuProcessLaunchSecurityCreateFile(vm, "session", sev->session, ".base64") < 0)
             return -1;
+    }
+
+    return 0;
+}
+
+
+static int
+qemuProcessPrepareTDXGuestInput(virDomainObjPtr vm)
+{
+    qemuDomainObjPrivatePtr priv = vm->privateData;
+    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
+    virQEMUCapsPtr qemuCaps = priv->qemuCaps;
+    virDomainTDXDefPtr tdx = ls->data.tdx;
+
+    if (!tdx)
+        return 0;
+
+    VIR_DEBUG("Preparing TDX guest");
+
+    if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST)) {
+        virReportError(VIR_ERR_INTERNAL_ERROR,
+                        _("Domain %s asked for 'tdx' launch but this "
+                          "QEMU does not support TDX feature"), vm->def->name);
+        return -1;
+    }
+
+    if (tdx->cert) {
+        if (qemuProcessLaunchSecurityCreateFile(vm, "cert", tdx->cert, NULL) < 0)
+            return -1;
+    }
+
+    if (tdx->key_server) {
+        if (qemuProcessLaunchSecurityCreateFile(vm, "key_server", tdx->key_server, NULL) < 0)
+            return -1;
+    }
+
+    return 0;
+}
+
+
+static int
+qemuProcessPrepareLaunchSecurityGuestInput(virDomainObjPtr vm)
+{
+    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
+
+    if (!ls)
+        return 0;
+
+    switch ((virDomainLaunchSecurity) ls->type) {
+    case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
+        return qemuProcessPrepareSEVGuestInput(vm);
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        return qemuProcessPrepareTDXGuestInput(vm);
+    case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
+    case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
+        return 0;
     }
 
     return 0;
@@ -6763,7 +6820,7 @@ qemuProcessPrepareHost(virQEMUDriverPtr driver,
     if (qemuExtDevicesPrepareHost(driver, vm) < 0)
         return -1;
 
-    if (qemuProcessPrepareSEVGuestInput(vm) < 0)
+    if (qemuProcessPrepareLaunchSecurityGuestInput(vm) < 0)
         return -1;
 
     return 0;

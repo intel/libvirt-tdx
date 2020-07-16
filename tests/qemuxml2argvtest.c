@@ -3422,6 +3422,9 @@ mymain(void)
 
     DO_TEST_CAPS_VER("launch-security-sev", "2.12.0");
     DO_TEST_CAPS_VER("launch-security-sev-missing-platform-info", "2.12.0");
+    DO_TEST("launch-security-tdx",
+            QEMU_CAPS_KVM,
+            QEMU_CAPS_TDX_GUEST);
 
     DO_TEST_CAPS_LATEST("vhost-user-fs-fd-memory");
     DO_TEST_CAPS_LATEST("vhost-user-fs-hugepages");
