@@ -7199,6 +7199,66 @@ qemuMonitorJSONGetSEVCapabilities(qemuMonitorPtr mon,
     return ret;
 }
 
+/**
+ * qemuMonitorJSONGetTDXCapabilities:
+ * @mon: qemu monitor object
+ * @capabilities: pointer to pointer to a TDX capability structure to be filled
+ *
+ * Returns -1 on error, 0 if TDX is not supported, and 1 if TDX is supported on
+ * the platform.
+ */
+int
+qemuMonitorJSONGetTDXCapabilities(qemuMonitorPtr mon,
+                                  virTDXCapability **capabilities)
+{
+    int ret = -1;
+    virJSONValuePtr cmd;
+    virJSONValuePtr reply = NULL;
+    virJSONValuePtr caps;
+    unsigned int shared_bit_pos;
+    g_autoptr(virTDXCapability) capability = NULL;
+
+    *capabilities = NULL;
+
+    if (!(cmd = qemuMonitorJSONMakeCommand("query-tdx-capabilities",
+                                           NULL)))
+        return -1;
+
+    if (qemuMonitorJSONCommand(mon, cmd, &reply) < 0)
+        goto cleanup;
+
+    /* QEMU has only compiled-in support of TDX */
+    if (qemuMonitorJSONHasError(reply, "GenericError")) {
+        ret = 0;
+        goto cleanup;
+    }
+
+    if (qemuMonitorJSONCheckError(cmd, reply) < 0)
+        goto cleanup;
+
+    caps = virJSONValueObjectGetObject(reply, "return");
+
+    if (virJSONValueObjectGetNumberUint(caps, "shared-bit-pos",
+                                        &shared_bit_pos) < 0) {
+        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                       _("query-tdx-capabilities reply was missing"
+                         " 'shared-bit-pos' field"));
+        goto cleanup;
+    }
+
+    capability = g_new0(virTDXCapability, 1);
+
+    capability->shared_bit_pos = shared_bit_pos;
+    *capabilities = g_steal_pointer(&capability);
+
+    ret = 1;
+ cleanup:
+    virJSONValueFree(cmd);
+    virJSONValueFree(reply);
+
+    return ret;
+}
+
 static virJSONValuePtr
 qemuMonitorJSONBuildInetSocketAddress(const char *host,
                                       const char *port)

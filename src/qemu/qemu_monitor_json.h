@@ -157,6 +157,9 @@ int qemuMonitorJSONGetGICCapabilities(qemuMonitorPtr mon,
 int qemuMonitorJSONGetSEVCapabilities(qemuMonitorPtr mon,
                                       virSEVCapability **capabilities);
 
+int qemuMonitorJSONGetTDXCapabilities(qemuMonitorPtr mon,
+                                      virTDXCapability **capabilities);
+
 int qemuMonitorJSONMigrate(qemuMonitorPtr mon,
                            unsigned int flags,
                            const char *uri);

@@ -181,6 +181,13 @@ struct _virSEVCapability {
     unsigned int reduced_phys_bits;
 };
 
+typedef struct _virTDXCapability virTDXCapability;
+typedef virTDXCapability *virTDXCapabilityPtr;
+struct _virTDXCapability {
+    // TODO: new capability fields
+    unsigned int shared_bit_pos;
+};
+
 typedef enum {
     VIR_DOMAIN_CAPS_FEATURE_IOTHREADS = 0,
     VIR_DOMAIN_CAPS_FEATURE_VMCOREINFO,
@@ -261,3 +268,9 @@ void
 virSEVCapabilitiesFree(virSEVCapability *capabilities);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(virSEVCapability, virSEVCapabilitiesFree);
+
+void
+
+virTDXCapabilitiesFree(virTDXCapability *capabilities);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(virTDXCapability, virTDXCapabilitiesFree);

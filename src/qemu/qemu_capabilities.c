@@ -618,6 +618,9 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "memory-backend-file.x-use-canonical-path-for-ramblock-id",
               "vnc-opts",
               "migration-param.block-bitmap-mapping",
+
+              /* 395 */
+              "tdx-guest",
     );
 
 
@@ -700,6 +703,8 @@ struct _virQEMUCaps {
     virGICCapability *gicCapabilities;
 
     virSEVCapability *sevCapabilities;
+
+    virTDXCapability *tdxCapabilities;
 
     /* Capabilities which may differ depending on the accelerator. */
     virQEMUCapsAccel kvm;
@@ -1339,6 +1344,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "am53c974", QEMU_CAPS_SCSI_AM53C974 },
     { "virtio-pmem-pci", QEMU_CAPS_DEVICE_VIRTIO_PMEM_PCI },
     { "vhost-user-blk", QEMU_CAPS_DEVICE_VHOST_USER_BLK },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
@@ -2001,6 +2007,7 @@ void virQEMUCapsDispose(void *obj)
     g_free(qemuCaps->gicCapabilities);
 
     virSEVCapabilitiesFree(qemuCaps->sevCapabilities);
+    virTDXCapabilitiesFree(qemuCaps->tdxCapabilities);
 
     virQEMUCapsAccelClear(&qemuCaps->kvm);
     virQEMUCapsAccelClear(&qemuCaps->tcg);
@@ -3411,6 +3418,32 @@ virQEMUCapsProbeQMPSEVCapabilities(virQEMUCapsPtr qemuCaps,
     return 0;
 }
 
+static int
+virQEMUCapsProbeQMPTDXCapabilities(virQEMUCapsPtr qemuCaps,
+                                   qemuMonitorPtr mon)
+{
+    int rc = -1;
+    virTDXCapability *caps = NULL;
+
+    if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST))
+        return 0;
+
+    if ((rc = qemuMonitorGetTDXCapabilities(mon, &caps)) < 0) {
+        virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                       _("lack the query-tdx-capabilities qmp command"));
+        return -1;
+    }
+
+    /* TDX isn't actually supported */
+    if (rc == 0) {
+        virQEMUCapsClear(qemuCaps, QEMU_CAPS_TDX_GUEST);
+        return 0;
+    }
+
+    virTDXCapabilitiesFree(qemuCaps->tdxCapabilities);
+    qemuCaps->tdxCapabilities = caps;
+    return 0;
+}
 
 /*
  * Filter for features which should never be passed to QEMU. Either because
@@ -5382,6 +5415,8 @@ virQEMUCapsInitQMPMonitor(virQEMUCapsPtr qemuCaps,
     if (virQEMUCapsProbeQMPGICCapabilities(qemuCaps, mon) < 0)
         return -1;
     if (virQEMUCapsProbeQMPSEVCapabilities(qemuCaps, mon) < 0)
+        return -1;
+    if (virQEMUCapsProbeQMPTDXCapabilities(qemuCaps, mon) < 0)
         return -1;
 
     virQEMUCapsInitProcessCaps(qemuCaps);

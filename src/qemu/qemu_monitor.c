@@ -3950,6 +3950,14 @@ qemuMonitorGetSEVCapabilities(qemuMonitorPtr mon,
     return qemuMonitorJSONGetSEVCapabilities(mon, capabilities);
 }
 
+int
+qemuMonitorGetTDXCapabilities(qemuMonitorPtr mon,
+                             virTDXCapability **capabilities)
+{
+    QEMU_CHECK_MONITOR(mon);
+
+    return qemuMonitorJSONGetTDXCapabilities(mon, capabilities);
+}
 
 int
 qemuMonitorNBDServerStart(qemuMonitorPtr mon,

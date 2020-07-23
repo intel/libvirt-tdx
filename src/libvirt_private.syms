@@ -218,6 +218,7 @@ virDomainCapsEnumSet;
 virDomainCapsFormat;
 virDomainCapsNew;
 virSEVCapabilitiesFree;
+virTDXCapabilitiesFree;
 
 
 # conf/domain_conf.h

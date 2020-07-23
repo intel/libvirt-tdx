@@ -76,6 +76,16 @@ virSEVCapabilitiesFree(virSEVCapability *cap)
     g_free(cap);
 }
 
+void
+virTDXCapabilitiesFree(virTDXCapability *cap)
+{
+    if (!cap)
+        return;
+
+    // TODO: new capability fields
+    VIR_FREE(cap);
+
+}
 
 static void
 virDomainCapsDispose(void *obj)
