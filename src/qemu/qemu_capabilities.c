@@ -6387,6 +6387,19 @@ virQEMUCapsFillDomainFeatureSEVCaps(virQEMUCapsPtr qemuCaps,
     domCaps->sev->reduced_phys_bits = cap->reduced_phys_bits;
 }
 
+static void
+virQEMUCapsFillDomainFeatureTDXCaps(virQEMUCapsPtr qemuCaps,
+                                    virDomainCapsPtr domCaps)
+{
+    virTDXCapability *cap = qemuCaps->tdxCapabilities;
+
+    if (!cap)
+        return;
+
+    domCaps->tdx = g_new0(virTDXCapability, 1);
+
+    domCaps->tdx->shared_bit_pos = cap->shared_bit_pos;
+}
 
 int
 virQEMUCapsFillDomainCaps(virQEMUCapsPtr qemuCaps,
@@ -6432,6 +6445,7 @@ virQEMUCapsFillDomainCaps(virQEMUCapsPtr qemuCaps,
     virQEMUCapsFillDomainDeviceRNGCaps(qemuCaps, rng);
     virQEMUCapsFillDomainFeatureGICCaps(qemuCaps, domCaps);
     virQEMUCapsFillDomainFeatureSEVCaps(qemuCaps, domCaps);
+    virQEMUCapsFillDomainFeatureTDXCaps(qemuCaps, domCaps);
 
     return 0;
 }

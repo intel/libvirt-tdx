@@ -184,5 +184,6 @@
     <backingStoreInput supported='no'/>
     <backup supported='no'/>
     <sev supported='no'/>
+    <tdx supported='no'/>
   </features>
 </domainCapabilities>

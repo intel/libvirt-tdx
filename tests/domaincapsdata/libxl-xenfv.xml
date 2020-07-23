@@ -76,5 +76,6 @@
     <vmcoreinfo supported='no'/>
     <genid supported='no'/>
     <sev supported='no'/>
+    <tdx supported='no'/>
   </features>
 </domainCapabilities>

@@ -240,6 +240,9 @@
       <optional>
         <ref name="sev"/>
       </optional>
+      <optional>
+        <ref name="tdx"/>
+      </optional>
     </element>
   </define>
 
@@ -271,6 +274,17 @@
   <define name="backup">
     <element name="backup">
       <ref name="supported"/>
+    </element>
+  </define>
+
+  <define name="tdx">
+    <element name="tdx">
+      <ref name="supported"/>
+      <optional>
+        <element name="sharedBitPos">
+          <data type="unsignedInt"/>
+        </element>
+      </optional>
     </element>
   </define>
 

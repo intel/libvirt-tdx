@@ -221,6 +221,7 @@ struct _virDomainCaps {
     virDomainCapsFeatureGIC gic;
     virSEVCapabilityPtr sev;
     /* add new domain features here */
+    virTDXCapabilityPtr tdx;
 
     virTristateBool features[VIR_DOMAIN_CAPS_FEATURE_LAST];
 };

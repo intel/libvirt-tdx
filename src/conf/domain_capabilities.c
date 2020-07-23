@@ -99,6 +99,7 @@ virDomainCapsDispose(void *obj)
     virObjectUnref(caps->cpu.custom);
     virCPUDefFree(caps->cpu.hostModel);
     virSEVCapabilitiesFree(caps->sev);
+    virTDXCapabilitiesFree(caps->tdx);
 
     values = &caps->os.loader.values;
     for (i = 0; i < values->nvalues; i++)
@@ -581,6 +582,22 @@ virDomainCapsFeatureSEVFormat(virBufferPtr buf,
     return;
 }
 
+static void
+virDomainCapsFeatureTDXFormat(virBufferPtr buf,
+                              const virTDXCapability *tdx)
+{
+    if (tdx) {
+        virBufferAddLit(buf, "<tdx supported='yes'>\n");
+        virBufferAdjustIndent(buf, 2);
+        virBufferAsprintf(buf, "<sharedBitPos>%d</sharedBitPos>\n",
+                          tdx->shared_bit_pos);
+        virBufferAdjustIndent(buf, -2);
+        virBufferAddLit(buf, "</tdx>\n");
+    } else {
+        virBufferAddLit(buf, "<tdx supported='no'/>\n");
+    }
+    return;
+}
 
 static void
 virDomainCapsFormatFeatures(const virDomainCaps *caps,
@@ -601,6 +618,8 @@ virDomainCapsFormatFeatures(const virDomainCaps *caps,
     }
 
     virDomainCapsFeatureSEVFormat(&childBuf, caps->sev);
+
+    virDomainCapsFeatureTDXFormat(&childBuf, caps->tdx);
 
     virXMLFormatElement(buf, "features", NULL, &childBuf);
 }
