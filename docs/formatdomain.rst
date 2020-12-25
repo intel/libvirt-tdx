@@ -7688,18 +7688,21 @@ Note: DEA/TDEA is synonymous with DES/TDES.
 Launch Security
 ---------------
 
-The contents of the ``<launchSecurity type='sev'>`` element is used to provide
-the guest owners input used for creating an encrypted VM using the AMD SEV
-feature (Secure Encrypted Virtualization). SEV is an extension to the AMD-V
-architecture which supports running encrypted virtual machine (VMs) under the
-control of KVM. Encrypted VMs have their pages (code and data) secured such that
-only the guest itself has access to the unencrypted version. Each encrypted VM
-is associated with a unique encryption key; if its data is accessed to a
-different entity using a different key the encrypted guests data will be
-incorrectly decrypted, leading to unintelligible data. For more information see
-various input parameters and its format see the `SEV API
+The contents of the ``<launchSecurity>`` element is used to provide the guest
+owners input used for creating an encrypted VM using the AMD SEV feature (Secure
+Encrypted Virtualization) or INTEL TDX feature (Trust Domain Extensions).
+
+SEV is an extension to the AMD-V architecture which supports running encrypted
+virtual machine (VMs) under the control of KVM. Encrypted VMs have their pages
+(code and data) secured such that only the guest itself has access to the
+unencrypted version. Each encrypted VM is associated with a unique encryption key;
+if its data is accessed to a different entity using a different key the encrypted
+guests data will be incorrectly decrypted, leading to unintelligible data. For
+more information see various input parameters and its format see the `SEV API
 spec <https://support.amd.com/TechDocs/55766_SEV-KM_API_Specification.pdf>`__
 :since:`Since 4.4.0`
+
+Example: usage of the SEV
 
 ::
 
@@ -7757,6 +7760,28 @@ spec <https://support.amd.com/TechDocs/55766_SEV-KM_API_Specification.pdf>`__
    The optional ``session`` element provides the guest owners base64 encoded
    session blob defined in the SEV API spec. See SEV spec LAUNCH_START section
    for the session blob format.
+
+TDX is an Intel technology that extends Virtual Machines Extensions (VMX) to with a
+new kind of virtual machine guest called Trust Domain (TD). A TD runs in a CPU model
+which protects the confidentiality of its memory contents and its CPU state from any
+other software, including the hosting Virtual Machine Monitor (VMM), unless explicitly
+shared by the TD itself.
+
+Example: usage of TDX:
+
+::
+
+   <domain>
+     ...
+     <launchSecurity type='tdx'>
+     ...
+   </domain>
+
+``cbitpos``
+   The required ``cbitpos`` element provides the C-bit (aka encryption bit)
+   location in guest page table entry. The value of ``cbitpos`` is hypervisor
+   dependent and can be obtained through the ``sev`` element from the domain
+   capabilities.
 
 :anchor:`<a id="examples"/>`
 
