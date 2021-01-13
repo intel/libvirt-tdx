@@ -9501,7 +9501,7 @@ qemuBuildTDXCommandLine(virDomainObjPtr vm, virCommandPtr cmd,
     if (tdx->policy)
         virBufferAsprintf(&buf, "tdx-guest,id=tdx,policy=0x%x", tdx->policy);
     else
-        virBufferAddLit(&buf, "tdx-guest,id=tdx");
+        virBufferAddLit(&buf, "tdx-guest,id=tdx,debug=on");
 
     if (tdx->cert) {
         path = g_strdup_printf("%s/cert", priv->libDir);
