@@ -6566,7 +6566,7 @@ qemuProcessPrepareSEVGuestInput(virDomainObjPtr vm)
     virDomainLaunchSecurityDefPtr ls = vm->def->ls;
     virDomainSEVDefPtr sev = ls->data.sev;
 
-    if (!ls || ls->type != VIR_DOMAIN_LAUNCH_SECURITY_SEV || !sev)
+    if (!sev)
         return 0;
 
     VIR_DEBUG("Preparing SEV guest");
