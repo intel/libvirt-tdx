@@ -4705,6 +4705,24 @@ virQEMUCapsKVMSupportsSecureGuestAMD(void)
 
 
 /*
+ * Check whether INTEL Trust Domain Extention (x86) is enabled
+ */
+static bool
+virQEMUCapsKVMSupportsSecureGuestINTEL(void)
+{
+    g_autofree char *modValue = NULL;
+
+    if (virFileReadValueString(&modValue, "/sys/firmware/tdx_seam/vendor_id") < 0)
+        return false;
+
+    if (STRNEQ(modValue, "0x8086"))
+        return false;
+
+    return true;
+}
+
+
+/*
  * Check whether the secure guest functionality is enabled.
  * See the specific architecture function for details on the verifications made.
  */
@@ -4717,7 +4735,8 @@ virQEMUCapsKVMSupportsSecureGuest(void)
         return virQEMUCapsKVMSupportsSecureGuestS390();
 
     if (ARCH_IS_X86(arch))
-        return virQEMUCapsKVMSupportsSecureGuestAMD();
+        return virQEMUCapsKVMSupportsSecureGuestAMD() ||
+               virQEMUCapsKVMSupportsSecureGuestINTEL();
 
     return false;
 }
