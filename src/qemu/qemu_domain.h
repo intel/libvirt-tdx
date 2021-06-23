@@ -134,6 +134,7 @@ struct _qemuDomainObjPrivate {
      * -no-reboot instead.
      */
     virTristateBool allowReboot;
+    bool hardReboot;
 
     unsigned long migMaxBandwidth;
     char *origname;
@@ -693,6 +694,9 @@ qemuDomainRemoveInactiveLocked(virQEMUDriver *driver,
                                virDomainObj *vm);
 
 void qemuDomainSetFakeReboot(virDomainObj *vm,
+                             bool value);
+
+void qemuDomainSetHardReboot(virDomainObj *vm,
                              bool value);
 
 int qemuDomainCheckDiskStartupPolicy(virQEMUDriver *driver,
