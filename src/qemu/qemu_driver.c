@@ -1964,6 +1964,7 @@ qemuDomainShutdownFlagsAgent(virQEMUDriver *driver,
         goto endjob;
 
     qemuDomainSetFakeReboot(driver, vm, false);
+    qemuDomainSetHardReboot(driver, vm, false);
     agent = qemuDomainObjEnterAgent(vm);
     ret = qemuAgentShutdown(agent, agentFlag);
     qemuDomainObjExitAgent(vm, agent);
@@ -1977,7 +1978,8 @@ qemuDomainShutdownFlagsAgent(virQEMUDriver *driver,
 static int
 qemuDomainShutdownFlagsMonitor(virQEMUDriver *driver,
                                virDomainObj *vm,
-                               bool isReboot)
+                               bool isReboot,
+                               bool hard)
 {
     int ret = -1;
     qemuDomainObjPrivate *priv;
@@ -1993,7 +1995,17 @@ qemuDomainShutdownFlagsMonitor(virQEMUDriver *driver,
         goto endjob;
     }
 
-    qemuDomainSetFakeReboot(driver, vm, isReboot);
+    if (hard) {
+        /* hard reboot control the reboot */
+        VIR_DEBUG("Set hard reboot %d in shutdown monitor", isReboot);
+        qemuDomainSetHardReboot(driver, vm, isReboot);
+        qemuDomainSetFakeReboot(driver, vm, false);
+    } else {
+        /* fake reboot control the reboot */
+        VIR_DEBUG("Set fake reboot %d in shutdown monitor", isReboot);
+        qemuDomainSetFakeReboot(driver, vm, isReboot);
+        qemuDomainSetHardReboot(driver, vm, false);
+    }
     qemuDomainObjEnterMonitor(driver, vm);
     ret = qemuMonitorSystemPowerdown(priv->mon);
     if (qemuDomainObjExitMonitor(driver, vm) < 0)
@@ -2011,12 +2023,13 @@ static int qemuDomainShutdownFlags(virDomainPtr dom, unsigned int flags)
     virDomainObj *vm;
     int ret = -1;
     qemuDomainObjPrivate *priv;
-    bool useAgent = false, agentRequested, acpiRequested;
+    bool useAgent = false, agentRequested, acpiRequested, hardRequested;
     bool isReboot = false;
     bool agentForced;
 
     virCheckFlags(VIR_DOMAIN_SHUTDOWN_ACPI_POWER_BTN |
-                  VIR_DOMAIN_SHUTDOWN_GUEST_AGENT, -1);
+                  VIR_DOMAIN_SHUTDOWN_GUEST_AGENT |
+                  VIR_DOMAIN_SHUTDOWN_HARD, -1);
 
     if (!(vm = qemuDomainObjFromDomain(dom)))
         goto cleanup;
@@ -2030,13 +2043,22 @@ static int qemuDomainShutdownFlags(virDomainPtr dom, unsigned int flags)
     priv = vm->privateData;
     agentRequested = flags & VIR_DOMAIN_SHUTDOWN_GUEST_AGENT;
     acpiRequested  = flags & VIR_DOMAIN_SHUTDOWN_ACPI_POWER_BTN;
+    hardRequested  = flags & VIR_DOMAIN_SHUTDOWN_HARD;
+
+    if (virDomainShutdownFlagsEnsureACL(dom->conn, vm->def, flags) < 0)
+        goto cleanup;
+
+    /* Take hard reboot as the highest priority.
+     * if failed, consider the agent and acpi */
+    if (hardRequested)
+        ret = qemuDomainShutdownFlagsMonitor(driver, vm, isReboot, true);
+
+    if (!ret)
+        goto cleanup;
 
     /* Prefer agent unless we were requested to not to. */
     if (agentRequested || (!flags && priv->agent))
         useAgent = true;
-
-    if (virDomainShutdownFlagsEnsureACL(dom->conn, vm->def, flags) < 0)
-        goto cleanup;
 
     agentForced = agentRequested && !acpiRequested;
     if (useAgent) {
@@ -2056,7 +2078,7 @@ static int qemuDomainShutdownFlags(virDomainPtr dom, unsigned int flags)
             goto cleanup;
         }
 
-        ret = qemuDomainShutdownFlagsMonitor(driver, vm, isReboot);
+        ret = qemuDomainShutdownFlagsMonitor(driver, vm, isReboot, false);
     }
 
  cleanup:
@@ -2094,6 +2116,7 @@ qemuDomainRebootAgent(virQEMUDriver *driver,
         goto endjob;
 
     qemuDomainSetFakeReboot(driver, vm, false);
+    qemuDomainSetHardReboot(driver, vm, false);
     agent = qemuDomainObjEnterAgent(vm);
     ret = qemuAgentShutdown(agent, agentFlag);
     qemuDomainObjExitAgent(vm, agent);
@@ -2107,7 +2130,8 @@ qemuDomainRebootAgent(virQEMUDriver *driver,
 static int
 qemuDomainRebootMonitor(virQEMUDriver *driver,
                         virDomainObj *vm,
-                        bool isReboot)
+                        bool isReboot,
+                        bool hard)
 {
     qemuDomainObjPrivate *priv = vm->privateData;
     int ret = -1;
@@ -2119,7 +2143,15 @@ qemuDomainRebootMonitor(virQEMUDriver *driver,
     if (virDomainObjCheckActive(vm) < 0)
         goto endjob;
 
-    qemuDomainSetFakeReboot(driver, vm, isReboot);
+    if (hard) {
+        VIR_DEBUG("Set hard reboot %d in reboot monitor", isReboot);
+        qemuDomainSetHardReboot(driver, vm, isReboot);
+        qemuDomainSetFakeReboot(driver, vm, false);
+    } else {
+        VIR_DEBUG("Set fake reboot %d in reboot monitor", isReboot);
+        qemuDomainSetFakeReboot(driver, vm, isReboot);
+        qemuDomainSetHardReboot(driver, vm, false);
+    }
     qemuDomainObjEnterMonitor(driver, vm);
     ret = qemuMonitorSystemPowerdown(priv->mon);
     if (qemuDomainObjExitMonitor(driver, vm) < 0)
@@ -2138,12 +2170,13 @@ qemuDomainReboot(virDomainPtr dom, unsigned int flags)
     virDomainObj *vm;
     int ret = -1;
     qemuDomainObjPrivate *priv;
-    bool useAgent = false, agentRequested, acpiRequested;
+    bool useAgent = false, agentRequested, acpiRequested, hardRequested;
     bool isReboot = true;
     bool agentForced;
 
     virCheckFlags(VIR_DOMAIN_REBOOT_ACPI_POWER_BTN |
-                  VIR_DOMAIN_REBOOT_GUEST_AGENT, -1);
+                  VIR_DOMAIN_REBOOT_GUEST_AGENT |
+                  VIR_DOMAIN_REBOOT_HARD, -1);
 
     if (!(vm = qemuDomainObjFromDomain(dom)))
         goto cleanup;
@@ -2157,13 +2190,23 @@ qemuDomainReboot(virDomainPtr dom, unsigned int flags)
     priv = vm->privateData;
     agentRequested = flags & VIR_DOMAIN_REBOOT_GUEST_AGENT;
     acpiRequested  = flags & VIR_DOMAIN_REBOOT_ACPI_POWER_BTN;
+    hardRequested = flags & VIR_DOMAIN_REBOOT_HARD;
+
+    if (virDomainRebootEnsureACL(dom->conn, vm->def, flags) < 0)
+        goto cleanup;
+
+    /* Take hard reboot as the highest priority.
+     * This is for TDX which is not allowed to warm reboot.
+     */
+    if (hardRequested)
+        ret = qemuDomainRebootMonitor(driver, vm, isReboot, true);
+
+    if (!ret)
+        goto cleanup;
 
     /* Prefer agent unless we were requested to not to. */
     if (agentRequested || (!flags && priv->agent))
         useAgent = true;
-
-    if (virDomainRebootEnsureACL(dom->conn, vm->def, flags) < 0)
-        goto cleanup;
 
     agentForced = agentRequested && !acpiRequested;
     if (useAgent)
@@ -2177,7 +2220,7 @@ qemuDomainReboot(virDomainPtr dom, unsigned int flags)
      */
     if ((!useAgent) ||
         (ret < 0 && (acpiRequested || !flags))) {
-        ret = qemuDomainRebootMonitor(driver, vm, isReboot);
+        ret = qemuDomainRebootMonitor(driver, vm, isReboot, false);
     }
 
  cleanup:
@@ -2278,6 +2321,7 @@ qemuDomainDestroyFlags(virDomainPtr dom,
     }
 
     qemuDomainSetFakeReboot(driver, vm, false);
+    qemuDomainSetHardReboot(driver, vm, false);
 
     if (priv->job.asyncJob == QEMU_ASYNC_JOB_MIGRATION_IN)
         stopFlags |= VIR_QEMU_PROCESS_STOP_MIGRATED;
