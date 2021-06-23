@@ -2776,6 +2776,7 @@ struct _virDomainDef {
     int virtType; /* enum virDomainVirtType */
     int id;
     unsigned char uuid[VIR_UUID_BUFLEN];
+    int origin_id;
 
     unsigned char genid[VIR_UUID_BUFLEN];
     bool genidRequested;
