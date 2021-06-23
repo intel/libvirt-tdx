@@ -160,6 +160,7 @@ struct _qemuDomainObjPrivate {
     bool fakeReboot;
     bool pausedShutdown;
     virTristateBool allowReboot;
+    bool hardReboot;
 
     int jobs_queued;
 
@@ -673,6 +674,10 @@ void qemuDomainRemoveInactive(virQEMUDriverPtr driver,
                               virDomainObjPtr vm);
 
 void qemuDomainSetFakeReboot(virQEMUDriverPtr driver,
+                             virDomainObjPtr vm,
+                             bool value);
+
+void qemuDomainSetHardReboot(virQEMUDriverPtr driver,
                              virDomainObjPtr vm,
                              bool value);
 

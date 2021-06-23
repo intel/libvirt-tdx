@@ -2494,6 +2494,9 @@ qemuDomainObjPrivateXMLFormat(virBufferPtr buf,
     if (priv->fakeReboot)
         virBufferAddLit(buf, "<fakereboot/>\n");
 
+    if (priv->hardReboot)
+        virBufferAddLit(buf, "<hardreboot/>\n");
+
     if (priv->qemuDevices && *priv->qemuDevices) {
         char **tmp = priv->qemuDevices;
         virBufferAddLit(buf, "<devices>\n");
@@ -3176,6 +3179,8 @@ qemuDomainObjPrivateXMLParse(xmlXPathContextPtr ctxt,
         goto error;
 
     priv->fakeReboot = virXPathBoolean("boolean(./fakereboot)", ctxt) == 1;
+
+    priv->hardReboot = virXPathBoolean("boolean(./hardreboot)", ctxt) == 1;
 
     if ((n = virXPathNodeSet("./devices/device", ctxt, &nodes)) < 0) {
         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
@@ -7123,6 +7128,23 @@ qemuDomainSetFakeReboot(virQEMUDriverPtr driver,
         return;
 
     priv->fakeReboot = value;
+
+    if (virDomainObjSave(vm, driver->xmlopt, cfg->stateDir) < 0)
+        VIR_WARN("Failed to save status on vm %s", vm->def->name);
+}
+
+void
+qemuDomainSetHardReboot(virQEMUDriverPtr driver,
+                        virDomainObjPtr vm,
+                        bool value)
+{
+    qemuDomainObjPrivatePtr priv = vm->privateData;
+    g_autoptr(virQEMUDriverConfig) cfg = virQEMUDriverGetConfig(driver);
+
+    if (priv->hardReboot == value)
+        return;
+
+    priv->hardReboot = value;
 
     if (virDomainObjSave(vm, driver->xmlopt, cfg->stateDir) < 0)
         VIR_WARN("Failed to save status on vm %s", vm->def->name);
