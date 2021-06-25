@@ -6356,6 +6356,23 @@ virQEMUCapsFillDomainFeatureS390PVCaps(virQEMUCaps *qemuCaps,
 }
 
 
+static void
+virQEMUCapsFillDomainFeatureTDXCaps(virQEMUCaps *qemuCaps,
+                                    virDomainCaps *domCaps)
+{
+    if (domCaps->arch == VIR_ARCH_X86_64) {
+        if (domCaps->virttype == VIR_DOMAIN_VIRT_KVM &&
+            virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_CONFIDENTAL_GUEST_SUPPORT) &&
+            virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST) &&
+            virQEMUCapsGetKVMSupportsSecureGuest(qemuCaps) &&
+            (STREQ(domCaps->machine, "q35") || STRPREFIX(domCaps->machine, "pc-q35-")))
+            domCaps->features[VIR_DOMAIN_CAPS_FEATURE_TDX] = VIR_TRISTATE_BOOL_YES;
+        else
+            domCaps->features[VIR_DOMAIN_CAPS_FEATURE_TDX] = VIR_TRISTATE_BOOL_NO;
+    }
+}
+
+
 int
 virQEMUCapsFillDomainCaps(virQEMUCaps *qemuCaps,
                           virArch hostarch,
@@ -6405,6 +6422,7 @@ virQEMUCapsFillDomainCaps(virQEMUCaps *qemuCaps,
     virQEMUCapsFillDomainFeatureGICCaps(qemuCaps, domCaps);
     virQEMUCapsFillDomainFeatureSEVCaps(qemuCaps, domCaps);
     virQEMUCapsFillDomainFeatureS390PVCaps(qemuCaps, domCaps);
+    virQEMUCapsFillDomainFeatureTDXCaps(qemuCaps, domCaps);
 
     return 0;
 }
