@@ -598,6 +598,7 @@
       &lt;cbitpos&gt;47&lt;/cbitpos&gt;
       &lt;reduced-phys-bits&gt;1&lt;/reduced-phys-bits&gt;
     &lt;/sev&gt;
+    &lt;tdx supported='yes'/&gt;
   &lt;/features&gt;
 &lt;/domainCapabilities&gt;
 </pre>
@@ -671,6 +672,22 @@
       For more details on the SEV feature, please follow resources in the
       AMD developer's document store. In order to use SEV with libvirt have
       a look at <a href="formatdomain.html#launchSecurity">SEV in domain XML</a>
+    </p>
+
+    <h4><a id="featureTDX">TDX capabilities</a></h4>
+
+    <p>Trust Domain Extensions(TDX) capabilities are exposed under the
+    <code>tdx</code> element.
+    TDX is an Intel technology that extends Virtual Machines Extensions (VMX)
+    to with a new kind of virtual machine guest called Trust Domain (TD). A TD
+    runs in a CPU model which protects the confidentiality of its memory contents
+    and its CPU state from any other software, including the hosting Virtual Machine
+    Monitor (VMM), unless explicitly shared by the TD itself.</p>
+
+    <p>
+      For more details on the TDX feature, please follow resources in the
+      Intel developer's document. In order to use TDX with libvirt have
+      a look at <a href="formatdomain.html#launchSecurity">TDX in domain XML</a>
     </p>
 
     <dl>
