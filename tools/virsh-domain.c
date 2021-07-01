@@ -3028,37 +3028,50 @@ static const vshCmdOptDef opts_console[] = {
      .type = VSH_OT_BOOL,
      .help =  N_("only connect if safe console handling is supported")
     },
+    {.name = "timekeep",
+     .type = VSH_OT_INT,
+     .help = N_("keep the console alive and try to reconnect in seconds")
+    },
     {.name = NULL}
 };
 
 static bool
 cmdRunConsole(vshControl *ctl, virDomainPtr dom,
               const char *name,
-              unsigned int flags)
+              unsigned int flags,
+              bool first)
 {
     int state;
     virshControl *priv = ctl->privData;
 
     if ((state = virshDomainState(ctl, dom, NULL)) < 0) {
-        vshError(ctl, "%s", _("Unable to get domain status"));
+        /* don't report error during the retry */
+        if (first)
+            vshError(ctl, "%s", _("Unable to get domain status"));
         return false;
     }
 
     if (state == VIR_DOMAIN_SHUTOFF) {
-        vshError(ctl, "%s", _("The domain is not running"));
+        /* don't report error during the retry */
+        if (first)
+            vshError(ctl, "%s", _("The domain is not running"));
         return false;
     }
 
     if (!isatty(STDIN_FILENO)) {
-        vshError(ctl, "%s", _("Cannot run interactive console without a controlling TTY"));
+        /* don't report error during the retry */
+        if (first)
+            vshError(ctl, "%s", _("Cannot run interactive console without a controlling TTY"));
         return false;
     }
 
-    vshPrintExtra(ctl, _("Connected to domain '%s'\n"), virDomainGetName(dom));
-    vshPrintExtra(ctl, _("Escape character is %s"), priv->escapeChar);
-    if (priv->escapeChar[0] == '^')
-        vshPrintExtra(ctl, " (Ctrl + %c)", priv->escapeChar[1]);
-    vshPrintExtra(ctl, "\n");
+    if (first) {
+        vshPrintExtra(ctl, _("Connected to domain '%s'\n"), virDomainGetName(dom));
+        vshPrintExtra(ctl, _("Escape character is %s"), priv->escapeChar);
+        if (priv->escapeChar[0] == '^')
+            vshPrintExtra(ctl, " (Ctrl + %c)", priv->escapeChar[1]);
+        vshPrintExtra(ctl, "\n");
+    }
     fflush(stdout);
     if (virshRunConsole(ctl, dom, name, flags) == 0)
         return true;
@@ -3072,8 +3085,12 @@ cmdConsole(vshControl *ctl, const vshCmd *cmd)
     g_autoptr(virshDomain) dom = NULL;
     bool force = vshCommandOptBool(cmd, "force");
     bool safe = vshCommandOptBool(cmd, "safe");
+    unsigned long long timekeep = 0;
     unsigned int flags = 0;
     const char *name = NULL;
+    virshControl *priv = ctl->privData;
+    bool toggle = true;
+    bool ret;
 
     if (!(dom = virshCommandOptDomain(ctl, cmd, NULL)))
         return false;
@@ -3081,12 +3098,26 @@ cmdConsole(vshControl *ctl, const vshCmd *cmd)
     if (vshCommandOptStringReq(ctl, cmd, "devname", &name) < 0) /* sc_prohibit_devname */
         return false;
 
+    if (vshCommandOptULongLong(ctl, cmd, "timekeep", &timekeep) < 0)
+        return false;
+
     if (force)
         flags |= VIR_DOMAIN_CONSOLE_FORCE;
     if (safe)
         flags |= VIR_DOMAIN_CONSOLE_SAFE;
 
-    return cmdRunConsole(ctl, dom, name, flags);
+    ret = cmdRunConsole(ctl, dom, name, flags, true);
+    if (timekeep > 0) {
+        /* retry to connect after sleeping for "timekeep" seconds.
+         * escape exit can leave the console immediately. */
+        while (!priv->escapeExit && toggle) {
+            sleep(timekeep);
+            if (!cmdRunConsole(ctl, dom, name, flags, false))
+                toggle = false;
+        }
+    }
+
+    return ret;
 }
 #endif /* WIN32 */
 
@@ -4133,7 +4164,7 @@ cmdStart(vshControl *ctl, const vshCmd *cmd)
     vshPrintExtra(ctl, _("Domain '%s' started\n"),
                   virDomainGetName(dom));
 #ifndef WIN32
-    if (console && !cmdRunConsole(ctl, dom, NULL, 0))
+    if (console && !cmdRunConsole(ctl, dom, NULL, 0, true))
         return false;
 #endif
 
@@ -8164,7 +8195,7 @@ cmdCreate(vshControl *ctl, const vshCmd *cmd)
                   virDomainGetName(dom), from);
 #ifndef WIN32
     if (console)
-        cmdRunConsole(ctl, dom, NULL, 0);
+        cmdRunConsole(ctl, dom, NULL, 0, true);
 #endif
     return true;
 }
