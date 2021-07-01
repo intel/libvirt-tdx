@@ -149,6 +149,7 @@ struct _virshControl {
                                    are missing */
     const char *escapeChar;     /* String representation of
                                    console escape character */
+    bool escapeExit;            /* true if use escape to exit */
 };
 
 /* Typedefs, function prototypes for job progress reporting.
