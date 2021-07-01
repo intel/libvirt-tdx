@@ -72,6 +72,7 @@ struct virConsole {
     struct virConsoleBuffer terminalToStream;
 
     char escapeChar;
+    bool isEscapeExit;
     virError error;
 };
 
@@ -269,6 +270,7 @@ virConsoleEventOnStdin(int watch G_GNUC_UNUSED,
             goto cleanup;
         }
         if (con->terminalToStream.data[con->terminalToStream.offset] == con->escapeChar) {
+            con->isEscapeExit = true;
             virConsoleShutdown(con, true);
             goto cleanup;
         }
@@ -489,6 +491,7 @@ virshRunConsole(vshControl *ctl,
 
  cleanup:
     virConsoleShutdown(con, ret == 0);
+    priv->escapeExit = con->isEscapeExit;
 
     if (ret < 0) {
         vshResetLibvirtError();
