@@ -319,6 +319,7 @@
                 <choice>
                   <value>rom</value>
                   <value>pflash</value>
+                  <value>generic</value>
                 </choice>
               </attribute>
             </optional>

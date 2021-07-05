@@ -1323,6 +1323,7 @@ VIR_ENUM_IMPL(virDomainLoader,
               "none",
               "rom",
               "pflash",
+              "generic",
 );
 
 VIR_ENUM_IMPL(virDomainIOAPIC,
@@ -1345,6 +1346,7 @@ VIR_ENUM_IMPL(virDomainOsDefFirmware,
               "none",
               "bios",
               "efi",
+              "generic",
 );
 
 VIR_ENUM_IMPL(virDomainOsDefFirmwareFeature,

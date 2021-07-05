@@ -5838,6 +5838,9 @@ virQEMUCapsFillDomainLoaderCaps(virDomainCapsLoader *capsLoader,
     VIR_DOMAIN_CAPS_ENUM_SET(capsLoader->type,
                              VIR_DOMAIN_LOADER_TYPE_PFLASH);
 
+    VIR_DOMAIN_CAPS_ENUM_SET(capsLoader->type,
+                             VIR_DOMAIN_LOADER_TYPE_GENERIC);
+
 
     VIR_DOMAIN_CAPS_ENUM_SET(capsLoader->readonly,
                              VIR_TRISTATE_BOOL_YES,
