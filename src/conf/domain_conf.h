@@ -2209,6 +2209,7 @@ typedef enum {
     VIR_DOMAIN_LOADER_TYPE_NONE = 0,
     VIR_DOMAIN_LOADER_TYPE_ROM,
     VIR_DOMAIN_LOADER_TYPE_PFLASH,
+    VIR_DOMAIN_LOADER_TYPE_GENERIC,
 
     VIR_DOMAIN_LOADER_TYPE_LAST
 } virDomainLoader;
@@ -2304,6 +2305,7 @@ typedef enum {
     VIR_DOMAIN_OS_DEF_FIRMWARE_NONE = 0,
     VIR_DOMAIN_OS_DEF_FIRMWARE_BIOS,
     VIR_DOMAIN_OS_DEF_FIRMWARE_EFI,
+    VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC,
 
     VIR_DOMAIN_OS_DEF_FIRMWARE_LAST
 } virDomainOsDefFirmware;
@@ -4267,3 +4269,9 @@ int
 virDomainObjGetMessages(virDomainObj *vm,
                         char ***msgs,
                         unsigned int flags);
+
+static inline bool
+virDomainDefIsTDX(const virDomainDef *def)
+{
+    return def->sec && def->sec->sectype == VIR_DOMAIN_LAUNCH_SECURITY_TDX;
+}

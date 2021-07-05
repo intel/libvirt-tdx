@@ -608,6 +608,12 @@ qemuValidateDomainDefBoot(const virDomainDef *def)
         }
     }
 
+    if (!virDomainDefIsTDX(def) && def->os.loader &&
+        def->os.loader->type == VIR_DOMAIN_LOADER_TYPE_GENERIC) {
+        virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                       _("GENERIC loader is only used by TDX currently"));
+    }
+
     return 0;
 }
 

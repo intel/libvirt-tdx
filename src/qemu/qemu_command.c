@@ -9630,6 +9630,25 @@ qemuBuildDomainLoaderPflashCommandLine(virCommand *cmd,
 
 
 static void
+qemuBuildDomainLoaderGenericCommandLine(virCommand *cmd,
+                                      virDomainLoaderDef *loader)
+{
+    g_auto(virBuffer) buf = VIR_BUFFER_INITIALIZER;
+
+    virBufferAddLit(&buf, "loader,id=fd0,file=");
+    virQEMUBuildBufferEscapeComma(&buf, loader->path);
+
+    if (loader->nvram) {
+        virBufferAddLit(&buf, ",config-firmware-volume=");
+        virQEMUBuildBufferEscapeComma(&buf, loader->nvram);
+    }
+
+    virCommandAddArg(cmd, "-device");
+    virCommandAddArgBuffer(cmd, &buf);
+}
+
+
+static void
 qemuBuildDomainLoaderCommandLine(virCommand *cmd,
                                  virDomainDef *def,
                                  virQEMUCaps *qemuCaps)
@@ -9647,6 +9666,10 @@ qemuBuildDomainLoaderCommandLine(virCommand *cmd,
 
     case VIR_DOMAIN_LOADER_TYPE_PFLASH:
         qemuBuildDomainLoaderPflashCommandLine(cmd, loader, qemuCaps);
+        break;
+
+    case VIR_DOMAIN_LOADER_TYPE_GENERIC:
+        qemuBuildDomainLoaderGenericCommandLine(cmd, loader);
         break;
 
     case VIR_DOMAIN_LOADER_TYPE_NONE:
