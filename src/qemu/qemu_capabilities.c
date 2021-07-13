@@ -665,6 +665,9 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "virtio-mem-pci.prealloc", /* QEMU_CAPS_DEVICE_VIRTIO_MEM_PCI_PREALLOC */
               "calc-dirty-rate", /* QEMU_CAPS_CALC_DIRTY_RATE */
               "dirtyrate-param.mode", /* QEMU_CAPS_DIRTYRATE_MODE */
+
+              /* 425 */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1401,6 +1404,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "virtio-vga-gl", QEMU_CAPS_VIRTIO_VGA_GL },
     { "s390-pv-guest", QEMU_CAPS_S390_PV_GUEST },
     { "virtio-mem-pci", QEMU_CAPS_DEVICE_VIRTIO_MEM_PCI },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
