@@ -651,6 +651,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "device.json", /* QEMU_CAPS_DEVICE_JSON */
               "query-dirty-rate", /* QEMU_CAPS_QUERY_DIRTY_RATE */
               "rbd-encryption", /* QEMU_CAPS_RBD_ENCRYPTION */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1351,6 +1352,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "virtio-vga-gl", QEMU_CAPS_VIRTIO_VGA_GL },
     { "s390-pv-guest", QEMU_CAPS_S390_PV_GUEST },
     { "virtio-mem-pci", QEMU_CAPS_DEVICE_VIRTIO_MEM_PCI },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
