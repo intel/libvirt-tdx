@@ -3435,7 +3435,7 @@ virQEMUCapsProbeQMPTDXCapabilities(virQEMUCapsPtr qemuCaps,
     }
 
     /* TDX isn't actually supported */
-    if (rc == 0) {
+    if (rc == 0 || !caps->enabled) {
         virQEMUCapsClear(qemuCaps, QEMU_CAPS_TDX_GUEST);
         return 0;
     }
@@ -6398,7 +6398,7 @@ virQEMUCapsFillDomainFeatureTDXCaps(virQEMUCapsPtr qemuCaps,
 
     domCaps->tdx = g_new0(virTDXCapability, 1);
 
-    domCaps->tdx->shared_bit_pos = cap->shared_bit_pos;
+    domCaps->tdx->enabled = cap->enabled;
 }
 
 int

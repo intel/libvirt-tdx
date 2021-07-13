@@ -586,13 +586,8 @@ static void
 virDomainCapsFeatureTDXFormat(virBufferPtr buf,
                               const virTDXCapability *tdx)
 {
-    if (tdx) {
-        virBufferAddLit(buf, "<tdx supported='yes'>\n");
-        virBufferAdjustIndent(buf, 2);
-        virBufferAsprintf(buf, "<sharedBitPos>%d</sharedBitPos>\n",
-                          tdx->shared_bit_pos);
-        virBufferAdjustIndent(buf, -2);
-        virBufferAddLit(buf, "</tdx>\n");
+    if (tdx && tdx->enabled) {
+        virBufferAddLit(buf, "<tdx supported='yes'/>\n");
     } else {
         virBufferAddLit(buf, "<tdx supported='no'/>\n");
     }

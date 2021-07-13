@@ -185,7 +185,7 @@ typedef struct _virTDXCapability virTDXCapability;
 typedef virTDXCapability *virTDXCapabilityPtr;
 struct _virTDXCapability {
     // TODO: new capability fields
-    unsigned int shared_bit_pos;
+    bool enabled;
 };
 
 typedef enum {

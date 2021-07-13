@@ -7215,7 +7215,7 @@ qemuMonitorJSONGetTDXCapabilities(qemuMonitorPtr mon,
     virJSONValuePtr cmd;
     virJSONValuePtr reply = NULL;
     virJSONValuePtr caps;
-    unsigned int shared_bit_pos;
+    bool enabled;
     g_autoptr(virTDXCapability) capability = NULL;
 
     *capabilities = NULL;
@@ -7238,17 +7238,17 @@ qemuMonitorJSONGetTDXCapabilities(qemuMonitorPtr mon,
 
     caps = virJSONValueObjectGetObject(reply, "return");
 
-    if (virJSONValueObjectGetNumberUint(caps, "shared-bit-pos",
-                                        &shared_bit_pos) < 0) {
+    if (virJSONValueObjectGetBoolean(caps, "enabled",
+                                        &enabled) < 0) {
         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
                        _("query-tdx-capabilities reply was missing"
-                         " 'shared-bit-pos' field"));
+                         " 'enabled' field"));
         goto cleanup;
     }
 
     capability = g_new0(virTDXCapability, 1);
 
-    capability->shared_bit_pos = shared_bit_pos;
+    capability->enabled = enabled;
     *capabilities = g_steal_pointer(&capability);
 
     ret = 1;
