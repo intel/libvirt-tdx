@@ -671,6 +671,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "chardev.qemu-vdagent", /* QEMU_CAPS_CHARDEV_QEMU_VDAGENT */
               "display-dbus", /* QEMU_CAPS_DISPLAY_DBUS */
               "iothread.thread-pool-max", /* QEMU_CAPS_IOTHREAD_THREAD_POOL_MAX */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1394,6 +1395,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "s390-pv-guest", QEMU_CAPS_S390_PV_GUEST },
     { "virtio-mem-pci", QEMU_CAPS_DEVICE_VIRTIO_MEM_PCI },
     { "virtio-iommu-pci", QEMU_CAPS_DEVICE_VIRTIO_IOMMU_PCI },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
