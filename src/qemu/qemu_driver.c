@@ -2179,7 +2179,9 @@ qemuDomainReboot(virDomainPtr dom, unsigned int flags)
     /* Take hard reboot as the highest priority.
      * This is for TDX which is not allowed to warm reboot.
      */
-    if (hardRequested)
+    if ((vm->def->ls &&
+         vm->def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_TDX &&
+         vm->def->ls->data.tdx) || hardRequested)
         ret = qemuDomainRebootMonitor(driver, vm, isReboot, true);
 
     if (!ret)
@@ -3705,7 +3707,13 @@ processGuestPanicEvent(virQEMUDriverPtr driver,
         G_GNUC_FALLTHROUGH;
 
     case VIR_DOMAIN_LIFECYCLE_ACTION_RESTART:
-        qemuDomainSetFakeReboot(driver, vm, true);
+        if (vm->def->ls &&
+            vm->def->ls->type == VIR_DOMAIN_LAUNCH_SECURITY_TDX &&
+            vm->def->ls->data.tdx) {
+                qemuDomainSetHardReboot(driver, vm, true);
+        } else {
+            qemuDomainSetFakeReboot(driver, vm, true);
+        }
         qemuProcessShutdownOrReboot(driver, vm);
         break;
 
