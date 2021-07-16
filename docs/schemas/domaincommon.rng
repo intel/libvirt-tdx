@@ -507,12 +507,17 @@
               <ref name="hexuint"/>
             </element>
             <optional>
-              <element name="cert">
+              <element name="mrConfigId">
                 <data type="string"/>
               </element>
             </optional>
             <optional>
-              <element name="keyServer">
+              <element name="mrOwner">
+                <data type="string"/>
+              </element>
+            </optional>
+            <optional>
+              <element name="mrOwnerConfig">
                 <data type="string"/>
               </element>
             </optional>

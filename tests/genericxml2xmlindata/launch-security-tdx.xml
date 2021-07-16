@@ -15,8 +15,9 @@
   <devices>
   </devices>
   <launchSecurity type='tdx'>
-    <policy>0x0001</policy>
-    <cert>AQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAA</cert>
-    <keyServer>localhost</keyServer>
+    <policy>0x0000</policy>
+    <mrConfigId>0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</mrConfigId>
+    <mrOwner>0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</mrOwner>
+    <mrOwnerConfig>0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</mrOwnerConfig>
   </launchSecurity>
 </domain>

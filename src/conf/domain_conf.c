@@ -3441,8 +3441,9 @@ virDomainTDXDefFree(virDomainTDXDefPtr def)
     if (!def)
         return;
 
-    g_free(def->cert);
-    g_free(def->key_server);
+    g_free(def->mrconfigid);
+    g_free(def->mrowner);
+    g_free(def->mrownerconfig);
 
     g_free(def);
 }
@@ -15581,8 +15582,9 @@ virDomainTDXDefParseXML(xmlXPathContextPtr ctxt)
     }
 
     def->policy = policy;
-    def->cert = virXPathString("string(./cert)", ctxt);
-    def->key_server = virXPathString("string(./keyServer)", ctxt);
+    def->mrconfigid = virXPathString("string(./mrConfigId)", ctxt);
+    def->mrowner = virXPathString("string(./mrOwner)", ctxt);
+    def->mrownerconfig = virXPathString("string(./mrOwnerConfig)", ctxt);
 
     return def;
 
@@ -27800,11 +27802,15 @@ virDomainTDXDefFormat(virBufferPtr buf, virDomainTDXDefPtr tdx)
     virBufferAdjustIndent(buf, 2);
 
     virBufferAsprintf(buf, "<policy>0x%04x</policy>\n", tdx->policy);
-    if (tdx->cert)
-        virBufferEscapeString(buf, "<cert>%s</cert>\n", tdx->cert);
 
-    if (tdx->key_server)
-        virBufferEscapeString(buf, "<keyServer>%s</keyServer>\n", tdx->key_server);
+    if (tdx->mrconfigid)
+        virBufferEscapeString(buf, "<mrConfigId>%s</mrConfigId>\n", tdx->mrconfigid);
+
+    if (tdx->mrowner)
+        virBufferEscapeString(buf, "<mrOwner>%s</mrOwner>\n", tdx->mrowner);
+
+    if (tdx->mrownerconfig)
+        virBufferEscapeString(buf, "<mrOwnerConfig>%s</mrOwnerConfig>\n", tdx->mrownerconfig);
 
     virBufferAdjustIndent(buf, -2);
     virBufferAddLit(buf, "</launchSecurity>\n");

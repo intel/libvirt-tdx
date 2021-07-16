@@ -29,8 +29,9 @@
     <memballoon model='none'/>
   </devices>
   <launchSecurity type='tdx'>
-    <policy>0x0001</policy>
-    <cert>AQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAAAQAAAAAOAAA</cert>
-    <keyServer>localhost</keyServer>
+    <policy>0x0000</policy>
+    <mrConfigId>AAAAAAAAAAAAAAAAAAAAAAAAAA</mrConfigId>
+    <mrOwner>AAAAAAAAAAAAAAAAAAAAAAAAAA</mrOwner>
+    <mrOwnerConfig>AAAAAAAAAAAAAAAAAAAAAAAAAA</mrOwnerConfig>
   </launchSecurity>
 </domain>

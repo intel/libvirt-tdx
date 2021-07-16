@@ -9486,33 +9486,36 @@ qemuBuildSEVCommandLine(virDomainObjPtr vm, virCommandPtr cmd,
 }
 
 static int
-qemuBuildTDXCommandLine(virDomainObjPtr vm, virCommandPtr cmd,
-                        virDomainTDXDefPtr tdx)
+qemuBuildTDXCommandLine(virCommandPtr cmd, virDomainTDXDefPtr tdx)
 {
     g_auto(virBuffer) buf = VIR_BUFFER_INITIALIZER;
-    qemuDomainObjPrivatePtr priv = vm->privateData;
-    char *path = NULL;
 
     if (!tdx)
         return 0;
 
     VIR_DEBUG("policy=0x%x", tdx->policy);
 
-    if (tdx->policy)
-        virBufferAsprintf(&buf, "tdx-guest,id=tdx,policy=0x%x", tdx->policy);
+    /**
+     * Use policy bit 0 to enable debug mode of TDX. Current, non-debug TD may slow
+     * down the bootup of TD guest if we use earlyprintk in guest kernel command
+     * at the same time. Current policy=0x0 indicates debug mode to Compatible
+     * with previous release. In future, we would refactor this field.
+     */
+    if (tdx->policy & 0x1)
+        virBufferAddLit(&buf, "tdx-guest,id=tdx");
     else
         virBufferAddLit(&buf, "tdx-guest,id=tdx,debug=on");
 
-    if (tdx->cert) {
-        path = g_strdup_printf("%s/cert", priv->libDir);
-        virBufferAsprintf(&buf, ",cert-file=%s", path);
-        VIR_FREE(path);
+    if (tdx->mrconfigid) {
+        virBufferAsprintf(&buf, ",mrconfigid=%s", tdx->mrconfigid);
     }
 
-    if (tdx->key_server) {
-        path = g_strdup_printf("%s/key_server", priv->libDir);
-        virBufferAsprintf(&buf, ",key-server-file=%s", path);
-        VIR_FREE(path);
+    if (tdx->mrowner) {
+        virBufferAsprintf(&buf, ",mrowner=%s", tdx->mrowner);
+    }
+
+    if (tdx->mrownerconfig) {
+        virBufferAsprintf(&buf, ",mrownerconfig=%s", tdx->mrownerconfig);
     }
 
     virCommandAddArg(cmd, "-object");
@@ -10147,7 +10150,7 @@ qemuBuildCommandLine(virQEMUDriverPtr driver,
                 return NULL;
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
-            if (qemuBuildTDXCommandLine(vm, cmd, def->ls->data.tdx) < 0)
+            if (qemuBuildTDXCommandLine(cmd, def->ls->data.tdx) < 0)
                 return NULL;
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_LAST:

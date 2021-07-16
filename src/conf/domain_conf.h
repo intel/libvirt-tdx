@@ -2514,9 +2514,10 @@ struct _virDomainSEVDef {
 };
 
 struct _virDomainTDXDef {
-    char *cert;
-    char *key_server;
     unsigned int policy;
+    char *mrconfigid;
+    char *mrowner;
+    char *mrownerconfig;
 };
 
 struct _virDomainLaunchSecurityDef {

@@ -29,6 +29,5 @@ server=on,wait=off \
 -usb \
 -drive file=/dev/HostVG/QEMUGuest1,format=raw,if=none,id=drive-ide0-0-0 \
 -device ide-hd,bus=ide.0,unit=0,drive=drive-ide0-0-0,id=ide0-0-0,bootindex=1 \
--object tdx-guest,id=tdx,policy=0x1,\
-cert-file=/tmp/lib/domain--1-QEMUGuest1/cert,\
-key-server-file=/tmp/lib/domain--1-QEMUGuest1/key_server
+-object tdx-guest,id=tdx,debug=on,mrconfigid=AAAAAAAAAAAAAAAAAAAAAAAAAA,\
+mrowner=AAAAAAAAAAAAAAAAAAAAAAAAAA,mrownerconfig=AAAAAAAAAAAAAAAAAAAAAAAAAA

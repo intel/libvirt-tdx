@@ -6584,41 +6584,6 @@ qemuProcessPrepareSEVGuestInput(virDomainObjPtr vm)
     return 0;
 }
 
-
-static int
-qemuProcessPrepareTDXGuestInput(virDomainObjPtr vm)
-{
-    qemuDomainObjPrivatePtr priv = vm->privateData;
-    virDomainLaunchSecurityDefPtr ls = vm->def->ls;
-    virQEMUCapsPtr qemuCaps = priv->qemuCaps;
-    virDomainTDXDefPtr tdx = ls->data.tdx;
-
-    if (!tdx)
-        return 0;
-
-    VIR_DEBUG("Preparing TDX guest");
-
-    if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST)) {
-        virReportError(VIR_ERR_INTERNAL_ERROR,
-                        _("Domain %s asked for 'tdx' launch but this "
-                          "QEMU does not support TDX feature"), vm->def->name);
-        return -1;
-    }
-
-    if (tdx->cert) {
-        if (qemuProcessLaunchSecurityCreateFile(vm, "cert", tdx->cert, NULL) < 0)
-            return -1;
-    }
-
-    if (tdx->key_server) {
-        if (qemuProcessLaunchSecurityCreateFile(vm, "key_server", tdx->key_server, NULL) < 0)
-            return -1;
-    }
-
-    return 0;
-}
-
-
 static int
 qemuProcessPrepareLaunchSecurityGuestInput(virDomainObjPtr vm)
 {
@@ -6631,7 +6596,6 @@ qemuProcessPrepareLaunchSecurityGuestInput(virDomainObjPtr vm)
     case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
         return qemuProcessPrepareSEVGuestInput(vm);
     case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
-        return qemuProcessPrepareTDXGuestInput(vm);
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
         return 0;
