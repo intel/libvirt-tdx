@@ -16,6 +16,7 @@
       <enum name='type'>
         <value>rom</value>
         <value>pflash</value>
+        <value>generic</value>
       </enum>
       <enum name='readonly'>
         <value>yes</value>
