@@ -17,6 +17,7 @@
       <enum name='type'>
         <value>rom</value>
         <value>pflash</value>
+        <value>generic</value>
       </enum>
       <enum name='readonly'>
         <value>yes</value>
@@ -213,6 +214,7 @@
     <genid supported='yes'/>
     <backingStoreInput supported='yes'/>
     <backup supported='no'/>
+    <tdx supported='no'/>
     <sev supported='no'/>
   </features>
 </domainCapabilities>
