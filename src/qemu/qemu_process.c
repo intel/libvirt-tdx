@@ -6616,6 +6616,7 @@ qemuProcessPrepareLaunchSecurityGuestInput(virDomainObj *vm)
     case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
         return qemuProcessPrepareSEVGuestInput(vm);
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
         return 0;
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
