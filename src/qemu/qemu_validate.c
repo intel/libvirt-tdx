@@ -1235,6 +1235,16 @@ qemuValidateDomainDef(const virDomainDef *def,
                 return -1;
             }
             break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+            if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_CONFIDENTAL_GUEST_SUPPORT) ||
+                !virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST) ||
+                !virQEMUCapsGetKVMSupportsSecureGuest(qemuCaps)) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                               _("INTEL TDX launch security is not supported with "
+                                 "this QEMU binary"));
+                return -1;
+            }
+            break;
         case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
         case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
             virReportEnumRangeError(virDomainLaunchSecurity, def->sec->sectype);
