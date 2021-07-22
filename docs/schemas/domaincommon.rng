@@ -275,6 +275,7 @@
             <choice>
               <value>bios</value>
               <value>efi</value>
+              <value>generic</value>
             </choice>
           </attribute>
         </optional>

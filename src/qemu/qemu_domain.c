@@ -11120,7 +11120,9 @@ qemuDomainInitializePflashStorageSource(virDomainObj *vm)
     if (!virQEMUCapsGet(priv->qemuCaps, QEMU_CAPS_BLOCKDEV))
         return 0;
 
-    if (!virDomainDefHasOldStyleUEFI(def))
+    /* TDX use generic loader rather than pflash */
+    if (!virDomainDefHasOldStyleUEFI(def) ||
+        def->os.loader->type == VIR_DOMAIN_LOADER_TYPE_GENERIC)
         return 0;
 
     pflash0 = virStorageSourceNew();

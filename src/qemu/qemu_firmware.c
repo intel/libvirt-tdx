@@ -84,12 +84,19 @@ struct _qemuFirmwareMappingMemory {
     char *filename;
 };
 
+typedef struct _qemuFirmwareMappingGeneric qemuFirmwareMappingGeneric;
+struct _qemuFirmwareMappingGeneric {
+    char *executable;
+    char *nvram_template;
+};
+
 
 typedef enum {
     QEMU_FIRMWARE_DEVICE_NONE = 0,
     QEMU_FIRMWARE_DEVICE_FLASH,
     QEMU_FIRMWARE_DEVICE_KERNEL,
     QEMU_FIRMWARE_DEVICE_MEMORY,
+    QEMU_FIRMWARE_DEVICE_GENERIC,
 
     QEMU_FIRMWARE_DEVICE_LAST
 } qemuFirmwareDevice;
@@ -101,6 +108,7 @@ VIR_ENUM_IMPL(qemuFirmwareDevice,
               "flash",
               "kernel",
               "memory",
+              "loader",
 );
 
 
@@ -112,6 +120,7 @@ struct _qemuFirmwareMapping {
         qemuFirmwareMappingFlash flash;
         qemuFirmwareMappingKernel kernel;
         qemuFirmwareMappingMemory memory;
+        qemuFirmwareMappingGeneric generic;
     } data;
 };
 
@@ -135,6 +144,7 @@ typedef enum {
     QEMU_FIRMWARE_FEATURE_SECURE_BOOT,
     QEMU_FIRMWARE_FEATURE_VERBOSE_DYNAMIC,
     QEMU_FIRMWARE_FEATURE_VERBOSE_STATIC,
+    QEMU_FIRMWARE_FEATURE_INTEL_TDX,
 
     QEMU_FIRMWARE_FEATURE_LAST
 } qemuFirmwareFeature;
@@ -151,7 +161,8 @@ VIR_ENUM_IMPL(qemuFirmwareFeature,
               "requires-smm",
               "secure-boot",
               "verbose-dynamic",
-              "verbose-static"
+              "verbose-static",
+              "intel-tdx"
 );
 
 
@@ -214,6 +225,14 @@ qemuFirmwareMappingMemoryFreeContent(qemuFirmwareMappingMemory *memory)
 
 
 static void
+qemuFirmwareMappingGenericFreeContent(qemuFirmwareMappingGeneric *generic)
+{
+    g_free(generic->executable);
+    g_free(generic->nvram_template);
+}
+
+
+static void
 qemuFirmwareMappingFreeContent(qemuFirmwareMapping *mapping)
 {
     switch (mapping->device) {
@@ -225,6 +244,9 @@ qemuFirmwareMappingFreeContent(qemuFirmwareMapping *mapping)
         break;
     case QEMU_FIRMWARE_DEVICE_MEMORY:
         qemuFirmwareMappingMemoryFreeContent(&mapping->data.memory);
+        break;
+    case QEMU_FIRMWARE_DEVICE_GENERIC:
+        qemuFirmwareMappingGenericFreeContent(&mapping->data.generic);
         break;
     case QEMU_FIRMWARE_DEVICE_NONE:
     case QEMU_FIRMWARE_DEVICE_LAST:
@@ -425,6 +447,36 @@ qemuFirmwareMappingMemoryParse(const char *path,
 
 
 static int
+qemuFirmwareMappingGenericParse(const char *path,
+                               virJSONValue *doc,
+                               qemuFirmwareMappingGeneric *generic)
+{
+    const char *executable;
+    const char *nvram_template;
+
+    if (!(executable = virJSONValueObjectGetString(doc, "executable"))) {
+        virReportError(VIR_ERR_INTERNAL_ERROR,
+                       _("missing 'executable' in '%s'"),
+                       path);
+        return -1;
+    }
+
+    generic->executable = g_strdup(executable);
+
+    if (!(nvram_template = virJSONValueObjectGetString(doc, "nvram_template"))) {
+        virReportError(VIR_ERR_INTERNAL_ERROR,
+                       _("missing 'nvram_template' in '%s'"),
+                       path);
+        return -1;
+    }
+
+    generic->nvram_template = g_strdup(nvram_template);
+
+    return 0;
+}
+
+
+static int
 qemuFirmwareMappingParse(const char *path,
                          virJSONValue *doc,
                          qemuFirmware *fw)
@@ -467,6 +519,10 @@ qemuFirmwareMappingParse(const char *path,
         break;
     case QEMU_FIRMWARE_DEVICE_MEMORY:
         if (qemuFirmwareMappingMemoryParse(path, mapping, &fw->mapping.data.memory) < 0)
+            return -1;
+        break;
+    case QEMU_FIRMWARE_DEVICE_GENERIC:
+        if (qemuFirmwareMappingGenericParse(path, mapping, &fw->mapping.data.generic) < 0)
             return -1;
         break;
 
@@ -741,6 +797,24 @@ qemuFirmwareMappingMemoryFormat(virJSONValue *mapping,
 
 
 static int
+qemuFirmwareMappingGenericFormat(virJSONValue *mapping,
+                                qemuFirmwareMappingGeneric *generic)
+{
+    if (virJSONValueObjectAppendString(mapping,
+                                       "executable",
+                                       generic->executable) < 0)
+        return -1;
+
+    if (virJSONValueObjectAppendString(mapping,
+                                       "nvram_template",
+                                       generic->nvram_template) < 0)
+        return -1;
+
+    return 0;
+}
+
+
+static int
 qemuFirmwareMappingFormat(virJSONValue *doc,
                           qemuFirmware *fw)
 {
@@ -762,6 +836,10 @@ qemuFirmwareMappingFormat(virJSONValue *doc,
         break;
     case QEMU_FIRMWARE_DEVICE_MEMORY:
         if (qemuFirmwareMappingMemoryFormat(mapping, &fw->mapping.data.memory) < 0)
+            return -1;
+        break;
+    case QEMU_FIRMWARE_DEVICE_GENERIC:
+        if (qemuFirmwareMappingGenericFormat(mapping, &fw->mapping.data.generic) < 0)
             return -1;
         break;
 
@@ -905,6 +983,7 @@ qemuFirmwareOSInterfaceTypeFromOsDefFirmware(int fw)
     case VIR_DOMAIN_OS_DEF_FIRMWARE_BIOS:
         return QEMU_FIRMWARE_OS_INTERFACE_BIOS;
     case VIR_DOMAIN_OS_DEF_FIRMWARE_EFI:
+    case VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC:
         return QEMU_FIRMWARE_OS_INTERFACE_UEFI;
     case VIR_DOMAIN_OS_DEF_FIRMWARE_NONE:
     case VIR_DOMAIN_OS_DEF_FIRMWARE_LAST:
@@ -932,6 +1011,7 @@ qemuFirmwareMatchDomain(const virDomainDef *def,
     bool supportsSEVES = false;
     bool supportsSecureBoot = false;
     bool hasEnrolledKeys = false;
+    bool supportsTDX = false;
     int reqSecureBoot;
     int reqEnrolledKeys;
 
@@ -941,12 +1021,16 @@ qemuFirmwareMatchDomain(const virDomainDef *def,
         def->os.loader) {
         want = qemuFirmwareOSInterfaceTypeFromOsDefFirmware(def->os.loader->type);
 
-        if (fw->mapping.device != QEMU_FIRMWARE_DEVICE_FLASH ||
-            STRNEQ(def->os.loader->path, fw->mapping.data.flash.executable.filename)) {
+        if ((fw->mapping.device != QEMU_FIRMWARE_DEVICE_FLASH ||
+             STRNEQ(def->os.loader->path, fw->mapping.data.flash.executable.filename)) &&
+            (fw->mapping.device != QEMU_FIRMWARE_DEVICE_GENERIC ||
+             STRNEQ(def->os.loader->path, fw->mapping.data.generic.executable))) {
             VIR_DEBUG("Not matching FW interface %s or loader "
                       "path '%s' for user provided path '%s'",
                       qemuFirmwareDeviceTypeToString(fw->mapping.device),
-                      fw->mapping.data.flash.executable.filename,
+                      fw->mapping.device == QEMU_FIRMWARE_DEVICE_FLASH ?
+                      fw->mapping.data.flash.executable.filename :
+                      fw->mapping.data.generic.executable,
                       def->os.loader->path);
             return false;
         }
@@ -993,6 +1077,10 @@ qemuFirmwareMatchDomain(const virDomainDef *def,
 
         case QEMU_FIRMWARE_FEATURE_ENROLLED_KEYS:
             hasEnrolledKeys = true;
+            break;
+
+        case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
+            supportsTDX = true;
             break;
 
         case QEMU_FIRMWARE_FEATURE_VERBOSE_DYNAMIC:
@@ -1069,8 +1157,14 @@ qemuFirmwareMatchDomain(const virDomainDef *def,
                 return false;
             }
             break;
-        case VIR_DOMAIN_LAUNCH_SECURITY_PV:
         case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+            if (!supportsTDX) {
+                VIR_DEBUG("Domain requires TDX, firmware '%s' doesn't support it",
+                          path);
+                return false;
+            }
+            break;
+        case VIR_DOMAIN_LAUNCH_SECURITY_PV:
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
         case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
@@ -1093,6 +1187,7 @@ qemuFirmwareEnableFeatures(virQEMUDriver *driver,
     const qemuFirmwareMappingFlash *flash = &fw->mapping.data.flash;
     const qemuFirmwareMappingKernel *kernel = &fw->mapping.data.kernel;
     const qemuFirmwareMappingMemory *memory = &fw->mapping.data.memory;
+    const qemuFirmwareMappingGeneric *generic = &fw->mapping.data.generic;
     size_t i;
 
     switch (fw->mapping.device) {
@@ -1149,6 +1244,26 @@ qemuFirmwareEnableFeatures(virQEMUDriver *driver,
                   def->os.loader->path);
         break;
 
+    case QEMU_FIRMWARE_DEVICE_GENERIC:
+        if (!def->os.loader)
+            def->os.loader = g_new0(virDomainLoaderDef, 1);
+
+        def->os.loader->type = VIR_DOMAIN_LOADER_TYPE_GENERIC;
+        def->os.loader->readonly = VIR_TRISTATE_BOOL_YES;
+
+        VIR_FREE(def->os.loader->path);
+        def->os.loader->path = g_strdup(generic->executable);
+
+        VIR_FREE(def->os.loader->templt);
+        def->os.loader->templt = g_strdup(generic->nvram_template);
+
+        qemuDomainNVRAMPathGenerate(cfg, def);
+
+        VIR_DEBUG("decided on firmware '%s' varstore template '%s'",
+                  def->os.loader->path,
+                  def->os.loader->templt);
+        break;
+
     case QEMU_FIRMWARE_DEVICE_NONE:
     case QEMU_FIRMWARE_DEVICE_LAST:
         break;
@@ -1183,6 +1298,7 @@ qemuFirmwareEnableFeatures(virQEMUDriver *driver,
         case QEMU_FIRMWARE_FEATURE_SECURE_BOOT:
         case QEMU_FIRMWARE_FEATURE_VERBOSE_DYNAMIC:
         case QEMU_FIRMWARE_FEATURE_VERBOSE_STATIC:
+        case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
         case QEMU_FIRMWARE_FEATURE_LAST:
             break;
         }
@@ -1199,6 +1315,7 @@ qemuFirmwareSanityCheck(const qemuFirmware *fw,
     size_t i;
     bool requiresSMM = false;
     bool supportsSecureBoot = false;
+    bool supportsTDX = false;
 
     for (i = 0; i < fw->nfeatures; i++) {
         switch (fw->features[i]) {
@@ -1207,6 +1324,9 @@ qemuFirmwareSanityCheck(const qemuFirmware *fw,
             break;
         case QEMU_FIRMWARE_FEATURE_SECURE_BOOT:
             supportsSecureBoot = true;
+            break;
+        case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
+            supportsTDX = true;
             break;
         case QEMU_FIRMWARE_FEATURE_NONE:
         case QEMU_FIRMWARE_FEATURE_ACPI_S3:
@@ -1221,7 +1341,8 @@ qemuFirmwareSanityCheck(const qemuFirmware *fw,
         }
     }
 
-    if (supportsSecureBoot != requiresSMM) {
+    /* TDX doesn't support SMM */
+    if ((supportsSecureBoot != requiresSMM) && !supportsTDX) {
         VIR_WARN("Firmware description '%s' has invalid set of features: "
                  "%s = %d, %s = %d",
                  filename,
@@ -1411,6 +1532,7 @@ qemuFirmwareGetSupported(const char *machine,
         qemuFirmware *fw = firmwares[i];
         const qemuFirmwareMappingFlash *flash = &fw->mapping.data.flash;
         const qemuFirmwareMappingMemory *memory = &fw->mapping.data.memory;
+        const qemuFirmwareMappingGeneric *generic = &fw->mapping.data.generic;
         const char *fwpath = NULL;
         const char *nvrampath = NULL;
         size_t j;
@@ -1421,7 +1543,10 @@ qemuFirmwareGetSupported(const char *machine,
         for (j = 0; j < fw->ninterfaces; j++) {
             switch (fw->interfaces[j]) {
             case QEMU_FIRMWARE_OS_INTERFACE_UEFI:
-                *supported |= 1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_EFI;
+                if (fw->mapping.device == QEMU_FIRMWARE_DEVICE_GENERIC)
+                    *supported |= 1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC;
+                else
+                    *supported |= 1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_EFI;
                 break;
             case QEMU_FIRMWARE_OS_INTERFACE_BIOS:
                 *supported |= 1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_BIOS;
@@ -1449,6 +1574,7 @@ qemuFirmwareGetSupported(const char *machine,
             case QEMU_FIRMWARE_FEATURE_SECURE_BOOT:
             case QEMU_FIRMWARE_FEATURE_VERBOSE_DYNAMIC:
             case QEMU_FIRMWARE_FEATURE_VERBOSE_STATIC:
+            case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
             case QEMU_FIRMWARE_FEATURE_LAST:
                 break;
             }
@@ -1462,6 +1588,11 @@ qemuFirmwareGetSupported(const char *machine,
 
         case QEMU_FIRMWARE_DEVICE_MEMORY:
             fwpath = memory->filename;
+            break;
+
+        case QEMU_FIRMWARE_DEVICE_GENERIC:
+            fwpath = generic->executable;
+            nvrampath = generic->nvram_template;
             break;
 
         case QEMU_FIRMWARE_DEVICE_KERNEL:

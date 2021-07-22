@@ -5916,6 +5916,8 @@ virQEMUCapsFillDomainOSCaps(virDomainCapsOS *os,
         VIR_DOMAIN_CAPS_ENUM_SET(os->firmware, VIR_DOMAIN_OS_DEF_FIRMWARE_BIOS);
     if (autoFirmwares & (1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_EFI))
         VIR_DOMAIN_CAPS_ENUM_SET(os->firmware, VIR_DOMAIN_OS_DEF_FIRMWARE_EFI);
+    if (autoFirmwares & (1ULL << VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC))
+        VIR_DOMAIN_CAPS_ENUM_SET(os->firmware, VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC);
 
     if (virQEMUCapsFillDomainLoaderCaps(capsLoader, secure,
                                         firmwaresAlt ? firmwaresAlt : firmwares,
