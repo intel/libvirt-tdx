@@ -1267,6 +1267,13 @@ qemuValidateDomainDef(const virDomainDef *def,
                                _("INTEL TDX launch security needs pic=off"));
                 return -1;
             }
+            if ((!def->os.loader ||
+                def->os.loader->type != VIR_DOMAIN_LOADER_TYPE_GENERIC) &&
+                def->os.firmware != VIR_DOMAIN_OS_DEF_FIRMWARE_GENERIC) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                               _("INTEL TDX launch security needs generic loader type"));
+                return -1;
+            }
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
         case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
