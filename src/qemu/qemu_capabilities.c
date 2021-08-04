@@ -639,7 +639,10 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "s390-pv-guest", /* QEMU_CAPS_S390_PV_GUEST */
               "set-action", /* QEMU_CAPS_SET_ACTION */
               "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
-    );
+
+              /* 410 */
+              "pic", /* QEMU_CAPS_MACHINE_PIC */
+);
 
 
 typedef struct _virQEMUCapsMachineType virQEMUCapsMachineType;
@@ -3230,6 +3233,7 @@ static struct virQEMUCapsCommandLineProps virQEMUCapsCommandLine[] = {
     { "vnc", "display", QEMU_CAPS_VNC_OPTS },
     { "vnc", "power-control", QEMU_CAPS_VNC_POWER_CONTROL },
     { "vnc", "audiodev", QEMU_CAPS_AUDIODEV },
+    { "machine", "pic", QEMU_CAPS_MACHINE_PIC },
 };
 
 static int

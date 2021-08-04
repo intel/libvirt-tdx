@@ -620,6 +620,9 @@ typedef enum { /* virQEMUCapsFlags grouping marker for syntax-check */
     QEMU_CAPS_SET_ACTION, /* 'set-action' QMP command */
     QEMU_CAPS_TDX_GUEST, /* -object tdx-guest,... */
 
+    /* 410 */
+    QEMU_CAPS_MACHINE_PIC, /* -machine pic */
+
     QEMU_CAPS_LAST /* this must always be the last item */
 } virQEMUCapsFlags;
 
