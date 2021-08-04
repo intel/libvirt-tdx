@@ -6226,6 +6226,13 @@
           <optional>
             <ref name="ibs"/>
           </optional>
+          <optional>
+            <element name="pic">
+              <optional>
+                <ref name="featurestate"/>
+              </optional>
+            </element>
+          </optional>
         </interleave>
       </element>
     </optional>

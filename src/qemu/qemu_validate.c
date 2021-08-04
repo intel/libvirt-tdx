@@ -310,6 +310,7 @@ qemuValidateDomainDefFeatures(const virDomainDef *def,
         case VIR_DOMAIN_FEATURE_PRIVNET:
         case VIR_DOMAIN_FEATURE_CAPABILITIES:
         case VIR_DOMAIN_FEATURE_MSRS:
+        case VIR_DOMAIN_FEATURE_PIC:
         case VIR_DOMAIN_FEATURE_LAST:
             break;
         }
