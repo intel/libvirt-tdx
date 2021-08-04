@@ -668,7 +668,8 @@ VIR_ENUM_IMPL(virQEMUCaps,
 
               /* 425 */
               "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
-    );
+              "pic", /* QEMU_CAPS_MACHINE_PIC */
+);
 
 
 typedef struct _virQEMUCapsMachineType virQEMUCapsMachineType;
@@ -3312,6 +3313,7 @@ static struct virQEMUCapsCommandLineProps virQEMUCapsCommandLine[] = {
     { "spice", "rendernode", QEMU_CAPS_SPICE_RENDERNODE },
     { "vnc", "power-control", QEMU_CAPS_VNC_POWER_CONTROL },
     { "vnc", "audiodev", QEMU_CAPS_AUDIODEV },
+    { "machine", "pic", QEMU_CAPS_MACHINE_PIC },
 };
 
 static int
