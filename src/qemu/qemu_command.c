@@ -7191,6 +7191,12 @@ qemuBuildMachineCommandLine(virCommand *cmd,
         virBufferAsprintf(&buf, ",cap-ibs=%s", str);
     }
 
+    if (def->features[VIR_DOMAIN_FEATURE_PIC] != VIR_TRISTATE_SWITCH_ABSENT) {
+        const char *str;
+        str = virTristateSwitchTypeToString(def->features[VIR_DOMAIN_FEATURE_PIC]);
+        virBufferAsprintf(&buf, ",pic=%s", str);
+    }
+
     if (cpu && cpu->model &&
         cpu->mode == VIR_CPU_MODE_HOST_MODEL &&
         qemuDomainIsPSeries(def) &&
