@@ -1215,10 +1215,26 @@ qemuValidateDomainDef(const virDomainDef *def,
         case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
             if (!virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_CONFIDENTAL_GUEST_SUPPORT) ||
                 !virQEMUCapsGet(qemuCaps, QEMU_CAPS_TDX_GUEST) ||
+                !virQEMUCapsGet(qemuCaps, QEMU_CAPS_MACHINE_PIC) ||
                 !virQEMUCapsGetKVMSupportsSecureGuest(qemuCaps)) {
                 virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
                                _("INTEL TDX launch security is not supported with "
                                  "this QEMU binary"));
+                return -1;
+            }
+            if (!qemuDomainIsQ35(def)) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                               _("Intel TDX is supported with q35 machine types only"));
+                return -1;
+            }
+            if (def->features[VIR_DOMAIN_FEATURE_IOAPIC] != VIR_DOMAIN_IOAPIC_QEMU) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                               _("INTEL TDX launch security needs split kernel irqchip"));
+                return -1;
+            }
+            if (def->features[VIR_DOMAIN_FEATURE_PIC] != VIR_TRISTATE_SWITCH_OFF) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
+                               _("INTEL TDX launch security needs pic=off"));
                 return -1;
             }
             break;
