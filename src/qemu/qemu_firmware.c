@@ -1198,12 +1198,24 @@ qemuFirmwareMatchDomain(const virDomainDef *def,
         }
     }
 
-    if (def->os.loader &&
+    /* TDX doesn't support SMM */
+    if (!virDomainDefIsTDX(def) && def->os.loader &&
         def->os.loader->secure == VIR_TRISTATE_BOOL_YES &&
         !requiresSMM) {
         VIR_DEBUG("Domain restricts pflash programming to SMM, "
                   "but firmware '%s' doesn't support SMM", path);
         return false;
+    } else if (virDomainDefIsTDX(def) && def->os.loader &&
+               def->os.loader->secure != VIR_TRISTATE_BOOL_ABSENT) {
+        if (def->os.loader->secure == VIR_TRISTATE_BOOL_YES && !supportsSecureBoot) {
+            VIR_DEBUG("User requested Secure Boot, firmware '%s' doesn't support it",
+                      path);
+            return false;
+        }
+        if (def->os.loader->secure == VIR_TRISTATE_BOOL_NO && supportsSecureBoot) {
+            VIR_DEBUG("User refused Secure Boot, firmware '%s' supports it", path);
+            return false;
+        }
     }
 
     if (fw->mapping.device == QEMU_FIRMWARE_DEVICE_FLASH &&
@@ -1562,9 +1574,9 @@ qemuFirmwareFillDomain(virQEMUDriver *driver,
  * or may not include user's $HOME) and for given combination of @machine and
  * @arch extract information to be later reported in domain capabilities.
  * The @supported contains a bitmap of found interfaces (and ORed values of 1
- * << VIR_DOMAIN_OS_DEF_FIRMWARE_*). Then, @supported is true if at least one
- * FW descriptor signalizes secure boot (although, this is checked against SMM
- * rather than SECURE_BOOT because reasons).
+ * << VIR_DOMAIN_OS_DEF_FIRMWARE_*). Then, @secure is true if at least one FW
+ * descriptor signalizes secure boot (although, this is checked against SMM
+ * for non-TDX rather than SECURE_BOOT because reasons).
  *
  * If @fws and @nfws are not NULL, then @fws is allocated (must be freed by
  * caller when no longer needed) and contains list of firmwares found in form
@@ -1589,6 +1601,8 @@ qemuFirmwareGetSupported(const char *machine,
 {
     qemuFirmware **firmwares = NULL;
     ssize_t nfirmwares = 0;
+    bool supportsSecureBoot = false;
+    bool supportsTDX = false;
     size_t i;
 
     *supported = VIR_DOMAIN_OS_DEF_FIRMWARE_NONE;
@@ -1640,20 +1654,28 @@ qemuFirmwareGetSupported(const char *machine,
             case QEMU_FIRMWARE_FEATURE_REQUIRES_SMM:
                 *secure = true;
                 break;
+            case QEMU_FIRMWARE_FEATURE_SECURE_BOOT:
+                supportsSecureBoot = true;
+                break;
+            case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
+                supportsTDX = true;
+                break;
             case QEMU_FIRMWARE_FEATURE_NONE:
             case QEMU_FIRMWARE_FEATURE_ACPI_S3:
             case QEMU_FIRMWARE_FEATURE_ACPI_S4:
             case QEMU_FIRMWARE_FEATURE_AMD_SEV:
             case QEMU_FIRMWARE_FEATURE_AMD_SEV_ES:
             case QEMU_FIRMWARE_FEATURE_ENROLLED_KEYS:
-            case QEMU_FIRMWARE_FEATURE_SECURE_BOOT:
             case QEMU_FIRMWARE_FEATURE_VERBOSE_DYNAMIC:
             case QEMU_FIRMWARE_FEATURE_VERBOSE_STATIC:
-            case QEMU_FIRMWARE_FEATURE_INTEL_TDX:
             case QEMU_FIRMWARE_FEATURE_LAST:
                 break;
             }
         }
+
+        /* TDX doesn't support SMM, check secure boot feature directly */
+        if (supportsSecureBoot && supportsTDX)
+            *secure = true;
 
         switch (fw->mapping.device) {
         case QEMU_FIRMWARE_DEVICE_FLASH:
