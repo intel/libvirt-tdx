@@ -4192,3 +4192,9 @@ int
 virDomainObjGetMessages(virDomainObj *vm,
                         char ***msgs,
                         unsigned int flags);
+
+static inline bool
+virDomainDefIsTDX(const virDomainDef *def)
+{
+    return def->sec && def->sec->sectype == VIR_DOMAIN_LAUNCH_SECURITY_TDX;
+}
