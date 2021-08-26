@@ -584,7 +584,8 @@ qemuValidateDomainDefBoot(const virDomainDef *def)
 
         /* SMM will be enabled by qemuFirmwareFillDomain() if needed. */
         if (def->os.firmware == VIR_DOMAIN_OS_DEF_FIRMWARE_NONE &&
-            def->features[VIR_DOMAIN_FEATURE_SMM] != VIR_TRISTATE_SWITCH_ON) {
+            def->features[VIR_DOMAIN_FEATURE_SMM] != VIR_TRISTATE_SWITCH_ON &&
+            !virDomainDefIsTDX(def)) {
             virReportError(VIR_ERR_CONFIG_UNSUPPORTED, "%s",
                            _("Secure boot requires SMM feature enabled"));
             return -1;
