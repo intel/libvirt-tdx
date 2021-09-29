@@ -1104,9 +1104,26 @@ qemuMonitorEmitEvent(qemuMonitor *mon, const char *event,
 
 
 void
-qemuMonitorEmitShutdown(qemuMonitor *mon, virTristateBool guest)
+qemuMonitorEmitShutdown(qemuMonitor *mon, virTristateBool guest,
+                        const char *reason)
 {
+    virDomainObj *vm = mon->vm;
+    qemuDomainObjPrivate *priv = vm->privateData;
+
     VIR_DEBUG("mon=%p guest=%u", mon, guest);
+
+    /* This isn't a proper place to set hardReboot but we need to access
+     * mon->vm which is defined in this file. Reboot in guest kernel will
+     * trigger SHUTDOWN event for td-guest, so we has to deal with it
+     * here. */
+    if (vm->def->sec &&
+        vm->def->sec->sectype == VIR_DOMAIN_LAUNCH_SECURITY_TDX &&
+        ((STREQ_NULLABLE(reason, "guest-shutdown") &&
+          vm->def->onPoweroff == VIR_DOMAIN_LIFECYCLE_ACTION_RESTART) ||
+         (STREQ_NULLABLE(reason, "guest-reset") &&
+          vm->def->onReboot == VIR_DOMAIN_LIFECYCLE_ACTION_RESTART))) {
+        priv->hardReboot = true;
+    }
 
     QEMU_MONITOR_CALLBACK(mon, domainShutdown, mon->vm, guest);
 }
