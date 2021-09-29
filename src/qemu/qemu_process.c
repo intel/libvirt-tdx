@@ -590,6 +590,7 @@ qemuProcessShutdownOrReboot(virQEMUDriver *driver,
         g_autofree char *name = g_strdup_printf("hard reboot-%s", vm->def->name);
         virThread th;
 
+        qemuDomainSetHardReboot(driver, vm, false);
         virObjectRef(vm);
         if (virThreadCreateFull(&th,
                                 false,
