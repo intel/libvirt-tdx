@@ -5813,7 +5813,14 @@ qemuProcessInit(virQEMUDriver *driver,
             goto cleanup;
         }
     } else {
-        vm->def->id = qemuDriverAllocateID(driver);
+        if (vm->def->origin_id > 0 && priv->hardReboot)
+            vm->def->id = vm->def->origin_id;
+        else
+            vm->def->id = qemuDriverAllocateID(driver);
+        vm->def->origin_id = vm->def->id;
+        if (vm->newDef)
+            vm->newDef->origin_id = vm->def->id;
+
         qemuDomainSetHardReboot(driver, vm, false);
         qemuDomainSetFakeReboot(driver, vm, false);
         virDomainObjSetState(vm, VIR_DOMAIN_PAUSED, VIR_DOMAIN_PAUSED_STARTING_UP);
