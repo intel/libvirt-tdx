@@ -12890,6 +12890,11 @@ qemuDomainMigratePerform3Params(virDomainPtr dom,
     if (!(vm = qemuDomObjFromDomain(dom)))
         goto cleanup;
 
+    if (qemuMigrationParamsCheckDomainQAT(vm, migParams) < 0) {
+        virDomainObjEndAPI(&vm);
+        goto cleanup;
+    }
+
     if (virDomainMigratePerform3ParamsEnsureACL(dom->conn, vm->def) < 0) {
         virDomainObjEndAPI(&vm);
         goto cleanup;

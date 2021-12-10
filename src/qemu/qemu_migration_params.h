@@ -55,6 +55,8 @@ typedef enum {
     QEMU_MIGRATION_PARAM_DOWNTIME_LIMIT,
     QEMU_MIGRATION_PARAM_BLOCK_INCREMENTAL,
     QEMU_MIGRATION_PARAM_XBZRLE_CACHE_SIZE,
+    QEMU_MIGRATION_PARAM_COMPRESS_WITH_QAT,
+    QEMU_MIGRATION_PARAM_COMPRESS_QAT_ZERO_COPY,
 
     QEMU_MIGRATION_PARAM_LAST
 } qemuMigrationParam;
@@ -147,5 +149,9 @@ qemuMigrationCapsCheck(virQEMUDriverPtr driver,
 bool
 qemuMigrationCapsGet(virDomainObjPtr vm,
                      qemuMigrationCapability cap);
+
+int
+qemuMigrationParamsCheckDomainQAT(virDomainObjPtr vm,
+                                  qemuMigrationParamsPtr migParams);
 
 #endif /* __QEMU_MIGRATION_PARAMS_H__ */

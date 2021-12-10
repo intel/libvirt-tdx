@@ -1,0 +1,7 @@
+<test>
+  <migParams>
+    <param name='compress-level' value='1'/>
+    <param name='compress-with-qat' value='yes'/>
+    <param name='qat-zero-copy' value='yes'/>
+  </migParams>
+</test>

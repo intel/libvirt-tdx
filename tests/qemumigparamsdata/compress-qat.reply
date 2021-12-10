@@ -1,0 +1,8 @@
+{
+  "id": "libvirt-1",
+  "return": {
+    "compress-level": 1,
+    "compress-with-qat": true,
+    "qat-zero-copy": true
+  }
+}

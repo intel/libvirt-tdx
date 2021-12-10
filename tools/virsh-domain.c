@@ -10409,6 +10409,10 @@ static const vshCmdOptDef opts_migrate[] = {
      .type = VSH_OT_INT,
      .help = N_("page cache size for xbzrle compression")
     },
+    {.name = "comp-qat-zero-copy",
+     .type = VSH_OT_BOOL,
+     .help = N_("enable zero-copy compression with QAT accelerator")
+    },
     {.name = "auto-converge-initial",
      .type = VSH_OT_INT,
      .help = N_("initial CPU throttling rate for auto-convergence")
@@ -10564,6 +10568,13 @@ doMigrate(void *opaque)
         if (virTypedParamsAddULLong(&params, &nparams, &maxparams,
                                     VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
                                     ullOpt) < 0)
+            goto save_error;
+    }
+
+    if (vshCommandOptBool(cmd, "comp-qat-zero-copy")){
+        if (virTypedParamsAddBoolean(
+                &params, &nparams, &maxparams,
+                VIR_MIGRATE_PARAM_COMPRESSION_QAT_ZERO_COPY, true) < 0)
             goto save_error;
     }
 

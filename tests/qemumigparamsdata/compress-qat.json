@@ -1,0 +1,5 @@
+{
+  "compress-level": 1,
+  "compress-with-qat": true,
+  "qat-zero-copy": true
+}

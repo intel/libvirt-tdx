@@ -1015,6 +1015,15 @@ typedef enum {
  */
 # define VIR_MIGRATE_PARAM_AUTO_CONVERGE_INCREMENT  "auto_converge.increment"
 
+/**
+ * VIR_MIGRATE_PARAM_COMPRESSION_QAT_ZERO_COPY:
+ *
+ * virDomainMigrate* params field: the QAT compression/decompression
+ * zero-copy feature.
+ *
+ */
+# define VIR_MIGRATE_PARAM_COMPRESSION_QAT_ZERO_COPY "compression.qat.zerocopy"
+
 /* Domain migration. */
 virDomainPtr virDomainMigrate (virDomainPtr domain, virConnectPtr dconn,
                                unsigned long flags, const char *dname,

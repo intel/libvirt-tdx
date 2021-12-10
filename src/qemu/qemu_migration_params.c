@@ -67,6 +67,7 @@ struct _qemuMigrationParams {
 typedef enum {
     QEMU_MIGRATION_COMPRESS_XBZRLE = 0,
     QEMU_MIGRATION_COMPRESS_MT,
+    QEMU_MIGRATION_COMPRESS_QAT,
 
     QEMU_MIGRATION_COMPRESS_LAST
 } qemuMigrationCompressMethod;
@@ -74,6 +75,7 @@ VIR_ENUM_DECL(qemuMigrationCompressMethod)
 VIR_ENUM_IMPL(qemuMigrationCompressMethod, QEMU_MIGRATION_COMPRESS_LAST,
               "xbzrle",
               "mt",
+              "qat",
 );
 
 VIR_ENUM_IMPL(qemuMigrationCapability, QEMU_MIGRATION_CAP_LAST,
@@ -101,6 +103,8 @@ VIR_ENUM_IMPL(qemuMigrationParam, QEMU_MIGRATION_PARAM_LAST,
               "downtime-limit",
               "block-incremental",
               "xbzrle-cache-size",
+              "compress-with-qat",
+              "qat-zero-copy",
 );
 
 typedef struct _qemuMigrationParamsAlwaysOnItem qemuMigrationParamsAlwaysOnItem;
@@ -176,6 +180,10 @@ static const qemuMigrationParamsTPMapItem qemuMigrationParamsTPMap[] = {
     {VIR_MIGRATE_PARAM_COMPRESSION_XBZRLE_CACHE,
      QEMU_MIGRATION_PARAM_XBZRLE_CACHE_SIZE,
      QEMU_MIGRATION_SOURCE | QEMU_MIGRATION_DESTINATION},
+
+    {VIR_MIGRATE_PARAM_COMPRESSION_QAT_ZERO_COPY,
+     QEMU_MIGRATION_PARAM_COMPRESS_QAT_ZERO_COPY,
+     QEMU_MIGRATION_SOURCE | QEMU_MIGRATION_DESTINATION},
 };
 
 static const qemuMigrationParamType qemuMigrationParamTypes[] = {
@@ -190,6 +198,8 @@ static const qemuMigrationParamType qemuMigrationParamTypes[] = {
     [QEMU_MIGRATION_PARAM_DOWNTIME_LIMIT] = QEMU_MIGRATION_PARAM_TYPE_ULL,
     [QEMU_MIGRATION_PARAM_BLOCK_INCREMENTAL] = QEMU_MIGRATION_PARAM_TYPE_BOOL,
     [QEMU_MIGRATION_PARAM_XBZRLE_CACHE_SIZE] = QEMU_MIGRATION_PARAM_TYPE_ULL,
+    [QEMU_MIGRATION_PARAM_COMPRESS_WITH_QAT] = QEMU_MIGRATION_PARAM_TYPE_BOOL,
+    [QEMU_MIGRATION_PARAM_COMPRESS_QAT_ZERO_COPY] = QEMU_MIGRATION_PARAM_TYPE_BOOL,
 };
 verify(ARRAY_CARDINALITY(qemuMigrationParamTypes) == QEMU_MIGRATION_PARAM_LAST);
 
@@ -354,6 +364,50 @@ qemuMigrationParamsSetTPULL(qemuMigrationParamsPtr migParams,
 
 
 static int
+qemuMigrationParamsGetBoolean(qemuMigrationParamsPtr migParams,
+                              qemuMigrationParam param,
+                              virTypedParameterPtr params,
+                              int nparams,
+                              const char *name)
+{
+    int rc;
+    int value;
+
+    if (qemuMigrationParamsCheckType(param, QEMU_MIGRATION_PARAM_TYPE_BOOL) < 0)
+        return -1;
+
+    if (!params)
+        return 0;
+
+    if ((rc = virTypedParamsGetBoolean(params, nparams, name, &value)) < 0)
+        return -1;
+
+    migParams->params[param].value.b = !!value;
+    migParams->params[param].set = !!rc;
+    return 0;
+}
+
+
+static int
+qemuMigrationParamsSetBoolean(qemuMigrationParamsPtr migParams,
+                              qemuMigrationParam param,
+                              virTypedParameterPtr *params,
+                              int *nparams,
+                              int *maxparams,
+                              const char *name)
+{
+    if (qemuMigrationParamsCheckType(param, QEMU_MIGRATION_PARAM_TYPE_BOOL) < 0)
+        return -1;
+
+    if (!migParams->params[param].set)
+        return 0;
+
+    return virTypedParamsAddBoolean(params, nparams, maxparams, name,
+                                    migParams->params[param].value.b ? 1 : 0);
+}
+
+
+static int
 qemuMigrationParamsSetCompression(virTypedParameterPtr params,
                                   int nparams,
                                   unsigned long flags,
@@ -361,6 +415,7 @@ qemuMigrationParamsSetCompression(virTypedParameterPtr params,
 {
     size_t i;
     int method;
+    size_t param;
     qemuMigrationCapability cap;
 
     for (i = 0; i < nparams; i++) {
@@ -389,6 +444,15 @@ qemuMigrationParamsSetCompression(virTypedParameterPtr params,
             cap = QEMU_MIGRATION_CAP_XBZRLE;
             break;
 
+        // Enabling qat accelerated live-migration, it also requires to
+        // enable 'compress' capability.
+        case QEMU_MIGRATION_COMPRESS_QAT:
+            param = QEMU_MIGRATION_PARAM_COMPRESS_WITH_QAT;
+            migParams->params[param].value.b = true;
+            migParams->params[param].set = true;
+            cap = QEMU_MIGRATION_CAP_COMPRESS;
+            break;
+
         case QEMU_MIGRATION_COMPRESS_MT:
             cap = QEMU_MIGRATION_CAP_COMPRESS;
             break;
@@ -400,8 +464,7 @@ qemuMigrationParamsSetCompression(virTypedParameterPtr params,
         ignore_value(virBitmapSetBit(migParams->caps, cap));
     }
 
-    if ((migParams->params[QEMU_MIGRATION_PARAM_COMPRESS_LEVEL].set ||
-         migParams->params[QEMU_MIGRATION_PARAM_COMPRESS_THREADS].set ||
+    if ((migParams->params[QEMU_MIGRATION_PARAM_COMPRESS_THREADS].set ||
          migParams->params[QEMU_MIGRATION_PARAM_DECOMPRESS_THREADS].set) &&
         !(migParams->compMethods & (1ULL << QEMU_MIGRATION_COMPRESS_MT))) {
         virReportError(VIR_ERR_INVALID_ARG, "%s",
@@ -409,10 +472,25 @@ qemuMigrationParamsSetCompression(virTypedParameterPtr params,
         goto error;
     }
 
+    if (migParams->params[QEMU_MIGRATION_PARAM_COMPRESS_LEVEL].set &&
+        !(migParams->compMethods & (1ULL << QEMU_MIGRATION_COMPRESS_MT |
+                                    1ULL <<  QEMU_MIGRATION_COMPRESS_QAT))) {
+        virReportError(VIR_ERR_INVALID_ARG, "%s",
+                       _("Turn multithread or qat compression on to tune it"));
+        goto error;
+    }
+
     if (migParams->params[QEMU_MIGRATION_PARAM_XBZRLE_CACHE_SIZE].set &&
         !(migParams->compMethods & (1ULL << QEMU_MIGRATION_COMPRESS_XBZRLE))) {
         virReportError(VIR_ERR_INVALID_ARG, "%s",
                        _("Turn xbzrle compression on to tune it"));
+        goto error;
+    }
+
+    if (migParams->params[QEMU_MIGRATION_PARAM_COMPRESS_QAT_ZERO_COPY].set &&
+        !(migParams->compMethods & (1ULL << QEMU_MIGRATION_COMPRESS_QAT))) {
+        virReportError(VIR_ERR_INVALID_ARG, "%s", _(
+            "QAT zero-copy is only enabled for compression with QAT accelerator."));
         goto error;
     }
 
@@ -475,6 +553,11 @@ qemuMigrationParamsFromFlags(virTypedParameterPtr params,
             break;
 
         case QEMU_MIGRATION_PARAM_TYPE_BOOL:
+            if (qemuMigrationParamsGetBoolean(migParams, item->param, params,
+                                            nparams, item->typedParam) < 0)
+                goto error;
+            break;
+
         case QEMU_MIGRATION_PARAM_TYPE_STRING:
             break;
         }
@@ -544,6 +627,12 @@ qemuMigrationParamsDump(qemuMigrationParamsPtr migParams,
             break;
 
         case QEMU_MIGRATION_PARAM_TYPE_BOOL:
+            if (qemuMigrationParamsSetBoolean(migParams, item->param,
+                                              params, nparams, maxparams,
+                                              item->typedParam) < 0)
+                return -1;
+            break;
+
         case QEMU_MIGRATION_PARAM_TYPE_STRING:
             break;
         }
@@ -1367,4 +1456,31 @@ qemuMigrationCapsGet(virDomainObjPtr vm,
         ignore_value(virBitmapGetBit(priv->migrationCaps, cap, &enabled));
 
     return enabled;
+}
+
+int
+qemuMigrationParamsCheckDomainQAT(virDomainObjPtr vm,
+                                  qemuMigrationParamsPtr migParams)
+{
+    long system_page_size;
+    bool bhugepage;
+    bool bmem_prealloc;
+
+    if (!(migParams->compMethods & (1ULL << QEMU_MIGRATION_COMPRESS_QAT)))
+        return 0;
+
+    system_page_size = virGetSystemPageSizeKB();
+    bhugepage = vm->def->mem.nhugepages &&
+                vm->def->mem.hugepages[0].size != system_page_size;
+    bmem_prealloc = bhugepage ||
+                    vm->def->mem.allocation == VIR_DOMAIN_MEMORY_ALLOCATION_IMMEDIATE;
+    if (!vm->def->mem.locked || !bmem_prealloc) {
+        virReportError(VIR_ERR_INVALID_ARG, "%s",
+                       _("Migration wtih QAT compression requires to "
+                         "set memory pre-allocation and mlock guest "
+                         "and qemu memory."));
+        return -1;
+    }
+
+    return 0;
 }
