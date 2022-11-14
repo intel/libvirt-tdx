@@ -41,6 +41,7 @@ VIR_ENUM_IMPL(virDomainCapsFeature,
               "backingStoreInput",
               "backup",
               "s390-pv",
+              "tdx",
 );
 
 static virClass *virDomainCapsClass;

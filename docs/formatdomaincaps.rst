@@ -554,6 +554,7 @@ capabilities. All features occur as children of the main ``features`` element.
          <cbitpos>47</cbitpos>
          <reduced-phys-bits>1</reduced-phys-bits>
        </sev>
+       <tdx supported='yes'/>
      </features>
    </domainCapabilities>
 
