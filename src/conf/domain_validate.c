@@ -1934,6 +1934,7 @@ virDomainDefLaunchSecurityValidate(const virDomainDef *def)
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
         break;
     }
