@@ -668,6 +668,7 @@ capabilities. All features occur as children of the main ``features`` element.
            <value>vapic</value>
          </enum>
        </hyperv>
+       <tdx supported='yes'/>
      </features>
    </domainCapabilities>
 
