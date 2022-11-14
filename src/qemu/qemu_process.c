@@ -591,6 +591,7 @@ qemuProcessShutdownOrReboot(virDomainObj *vm)
                                 vm) < 0) {
             VIR_ERROR(_("Failed to create hard reboot thread, killing domain"));
             ignore_value(qemuProcessKill(vm, VIR_QEMU_PROCESS_KILL_NOWAIT));
+            qemuDomainSetHardReboot(vm, false);
             virObjectUnref(vm);
         }
     } else if (priv->fakeReboot ||
