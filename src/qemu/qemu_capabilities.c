@@ -698,6 +698,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
               /* 450 */
               "run-with.async-teardown", /* QEMU_CAPS_RUN_WITH_ASYNC_TEARDOWN */
               "virtio-blk-vhost-vdpa", /* QEMU_CAPS_DEVICE_VIRTIO_BLK_VHOST_VDPA */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1385,6 +1386,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "virtio-crypto-device", QEMU_CAPS_DEVICE_VIRTIO_CRYPTO },
     { "cryptodev-backend-lkcf", QEMU_CAPS_OBJECT_CRYPTO_LKCF },
     { "pvpanic-pci", QEMU_CAPS_DEVICE_PANIC_PCI },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
