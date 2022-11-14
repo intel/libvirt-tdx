@@ -3934,6 +3934,7 @@ void virDomainObjAssignDef(virDomainObj *domain,
         else
             virDomainDefFree(domain->newDef);
         domain->newDef = g_steal_pointer(def);
+        domain->newDef->origin_id = domain->def->id;
         return;
     }
 
@@ -17607,6 +17608,8 @@ virDomainDefParseIDs(virDomainDef *def,
         if (virXPathLong("string(./@id)", ctxt, &id) < 0)
             id = -1;
     def->id = (int)id;
+    /* Restore origin_id to support hard reboot */
+    def->origin_id = def->id;
 
     /* Extract domain name */
     if (!(def->name = virXPathString("string(./name[1])", ctxt))) {
