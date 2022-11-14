@@ -7039,6 +7039,7 @@ qemuBuildMachineCommandLine(virCommand *cmd,
             }
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_PV:
+        case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
             virBufferAddLit(&buf, ",confidential-guest-support=lsec0");
             break;
         case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
@@ -9690,6 +9691,31 @@ qemuBuildPVCommandLine(virDomainObj *vm, virCommand *cmd)
 
 
 static int
+qemuBuildTDXCommandLine(virDomainObj *vm, virCommand *cmd,
+                        virDomainTDXDef *tdx)
+{
+    g_autoptr(virJSONValue) props = NULL;
+    qemuDomainObjPrivate *priv = vm->privateData;
+
+    VIR_DEBUG("policy=0x%x", tdx->policy);
+
+    if (qemuMonitorCreateObjectProps(&props, "tdx-guest", "lsec0",
+                                     "b:sept-ve-disable", !!(tdx->policy & 0x10000000),
+                                     "S:mrconfigid", tdx->mrconfigid,
+                                     "S:mrowner", tdx->mrowner,
+                                     "S:mrownerconfig", tdx->mrownerconfig,
+                                     "S:quote-generation-service", tdx->QGS,
+                                     NULL) < 0)
+        return -1;
+
+    if (qemuBuildObjectCommandlineFromJSON(cmd, props, priv->qemuCaps) < 0)
+        return -1;
+
+    return 0;
+}
+
+
+static int
 qemuBuildSecCommandLine(virDomainObj *vm, virCommand *cmd,
                         virDomainSecDef *sec)
 {
@@ -9702,6 +9728,9 @@ qemuBuildSecCommandLine(virDomainObj *vm, virCommand *cmd,
         break;
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
         return qemuBuildPVCommandLine(vm, cmd);
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        return qemuBuildTDXCommandLine(vm, cmd, &sec->data.tdx);
         break;
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
