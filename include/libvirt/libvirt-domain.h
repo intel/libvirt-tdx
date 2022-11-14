@@ -1494,6 +1494,7 @@ typedef enum {
     VIR_DOMAIN_SHUTDOWN_INITCTL        = (1 << 2), /* Use initctl (Since: 1.0.1) */
     VIR_DOMAIN_SHUTDOWN_SIGNAL         = (1 << 3), /* Send a signal (Since: 1.0.1) */
     VIR_DOMAIN_SHUTDOWN_PARAVIRT       = (1 << 4), /* Use paravirt guest control (Since: 1.2.5) */
+    VIR_DOMAIN_SHUTDOWN_HARD           = (1 << 5), /* Powercycle control (Since: 8.6.0) */
 } virDomainShutdownFlagValues;
 
 int                     virDomainShutdown       (virDomainPtr domain);
@@ -1512,6 +1513,7 @@ typedef enum {
     VIR_DOMAIN_REBOOT_INITCTL        = (1 << 2), /* Use initctl (Since: 1.0.1) */
     VIR_DOMAIN_REBOOT_SIGNAL         = (1 << 3), /* Send a signal (Since: 1.0.1) */
     VIR_DOMAIN_REBOOT_PARAVIRT       = (1 << 4), /* Use paravirt guest control (Since: 1.2.5) */
+    VIR_DOMAIN_REBOOT_HARD           = (1 << 5), /* Powercycle control (Since: 8.6.0) */
 } virDomainRebootFlagValues;
 
 int                     virDomainReboot         (virDomainPtr domain,

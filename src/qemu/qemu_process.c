@@ -502,13 +502,98 @@ qemuProcessFakeReboot(void *opaque)
     virDomainObjEndAPI(&vm);
 }
 
+static void
+qemuProcessHardReboot(void *opaque)
+{
+    virDomainObj *vm = opaque;
+    qemuDomainObjPrivate *priv = vm->privateData;
+    virQEMUDriver *driver = priv->driver;
+    unsigned int stopFlags = 0;
+    virObjectEvent *event = NULL;
+    virObjectEvent * event2 = NULL;
+
+    VIR_DEBUG("Handle hard reboot: destroy phase");
+
+    virObjectLock(vm);
+    if (virDomainObjCheckActive(vm) < 0)
+        goto cleanup;
+
+    if (qemuProcessBeginStopJob(driver, vm, VIR_JOB_DESTROY, 0) < 0)
+        goto cleanup;
+
+    if (!virDomainObjIsActive(vm)) {
+        virReportError(VIR_ERR_OPERATION_INVALID,
+                       "%s", _("domain is not running"));
+        qemuDomainObjEndJob(vm);
+        goto cleanup;
+    }
+
+    if (priv->job.asyncJob == VIR_ASYNC_JOB_MIGRATION_IN)
+        stopFlags |= VIR_QEMU_PROCESS_STOP_MIGRATED;
+
+    qemuProcessStop(driver, vm, VIR_DOMAIN_SHUTOFF_DESTROYED,
+                    VIR_ASYNC_JOB_NONE, stopFlags);
+    virDomainAuditStop(vm, "destroyed");
+
+    event = virDomainEventLifecycleNewFromObj(vm,
+                                     VIR_DOMAIN_EVENT_STOPPED,
+                                     VIR_DOMAIN_EVENT_STOPPED_DESTROYED);
+
+    virObjectEventStateQueue(driver->domainEventState, event);
+    /* skip remove inactive domain from active list */
+    qemuDomainObjEndJob(vm);
+
+    VIR_DEBUG("Handle hard reboot: boot phase");
+
+    if (qemuProcessBeginJob(driver, vm, VIR_DOMAIN_JOB_OPERATION_START,
+                            0) < 0) {
+        qemuDomainRemoveInactive(driver, vm);
+        goto cleanup;
+    }
+
+    if (qemuProcessStart(NULL, driver, vm, NULL, VIR_ASYNC_JOB_START,
+                         NULL, -1, NULL, NULL,
+                         VIR_NETDEV_VPORT_PROFILE_OP_CREATE,
+                         0) < 0) {
+        virDomainAuditStart(vm, "booted", false);
+        qemuDomainRemoveInactive(driver, vm);
+        qemuProcessEndJob(vm);
+        goto cleanup;
+    }
+
+    virDomainAuditStart(vm, "booted", true);
+    event2 = virDomainEventLifecycleNewFromObj(vm,
+                                     VIR_DOMAIN_EVENT_STARTED,
+                                     VIR_DOMAIN_EVENT_STARTED_BOOTED);
+    virObjectEventStateQueue(driver->domainEventState, event2);
+
+    qemuProcessEndJob(vm);
+
+ cleanup:
+    virDomainObjEndAPI(&vm);
+}
 
 void
 qemuProcessShutdownOrReboot(virDomainObj *vm)
 {
     qemuDomainObjPrivate *priv = vm->privateData;
 
-    if (priv->fakeReboot ||
+    if (priv->hardReboot) {
+        g_autofree char *name = g_strdup_printf("hard reboot-%s", vm->def->name);
+        virThread th;
+
+        virObjectRef(vm);
+        if (virThreadCreateFull(&th,
+                                false,
+                                qemuProcessHardReboot,
+                                name,
+                                false,
+                                vm) < 0) {
+            VIR_ERROR(_("Failed to create hard reboot thread, killing domain"));
+            ignore_value(qemuProcessKill(vm, VIR_QEMU_PROCESS_KILL_NOWAIT));
+            virObjectUnref(vm);
+        }
+    } else if (priv->fakeReboot ||
         vm->def->onPoweroff == VIR_DOMAIN_LIFECYCLE_ACTION_RESTART) {
         g_autofree char *name = g_strdup_printf("reboot-%s", vm->def->name);
         virThread th;
@@ -5784,6 +5869,7 @@ qemuProcessInit(virQEMUDriver *driver,
         }
     } else {
         vm->def->id = qemuDriverAllocateID(driver);
+        qemuDomainSetFakeReboot(vm, false);
         qemuDomainSetFakeReboot(vm, false);
         virDomainObjSetState(vm, VIR_DOMAIN_PAUSED, VIR_DOMAIN_PAUSED_STARTING_UP);
 
