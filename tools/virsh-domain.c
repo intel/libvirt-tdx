@@ -5915,7 +5915,7 @@ static const vshCmdOptDef opts_shutdown[] = {
     {.name = "mode",
      .type = VSH_OT_STRING,
      .completer = virshDomainShutdownModeCompleter,
-     .help = N_("shutdown mode: acpi|agent|initctl|signal|paravirt")
+     .help = N_("shutdown mode: acpi|agent|initctl|signal|paravirt|hard")
     },
     {.name = NULL}
 };
@@ -5952,6 +5952,8 @@ cmdShutdown(vshControl *ctl, const vshCmd *cmd)
             flags |= VIR_DOMAIN_SHUTDOWN_SIGNAL;
         } else if (STREQ(mode, "paravirt")) {
             flags |= VIR_DOMAIN_SHUTDOWN_PARAVIRT;
+        } else if (STREQ(mode, "hard")) {
+            flags |= VIR_DOMAIN_SHUTDOWN_HARD;
         } else {
             vshError(ctl, _("Unknown mode %1$s value, expecting 'acpi', 'agent', 'initctl', 'signal', or 'paravirt'"),
                      mode);
@@ -5995,7 +5997,7 @@ static const vshCmdOptDef opts_reboot[] = {
     {.name = "mode",
      .type = VSH_OT_STRING,
      .completer = virshDomainShutdownModeCompleter,
-     .help = N_("shutdown mode: acpi|agent|initctl|signal|paravirt")
+     .help = N_("shutdown mode: acpi|agent|initctl|signal|paravirt|hard")
     },
     {.name = NULL}
 };
@@ -6031,6 +6033,8 @@ cmdReboot(vshControl *ctl, const vshCmd *cmd)
             flags |= VIR_DOMAIN_REBOOT_SIGNAL;
         } else if (STREQ(mode, "paravirt")) {
             flags |= VIR_DOMAIN_REBOOT_PARAVIRT;
+        } else if (STREQ(mode, "hard")) {
+            flags |= VIR_DOMAIN_REBOOT_HARD;
         } else {
             vshError(ctl, _("Unknown mode %1$s value, expecting 'acpi', 'agent', 'initctl', 'signal' or 'paravirt'"),
                      mode);
