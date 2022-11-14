@@ -673,6 +673,9 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "iothread.thread-pool-max", /* QEMU_CAPS_IOTHREAD_THREAD_POOL_MAX */
               "usb-host.guest-resets-all", /* QEMU_CAPS_USB_HOST_GUESTS_RESETS_ALL */
               "migration.blocked-reasons", /* QEMU_CAPS_MIGRATION_BLOCKED_REASONS */
+
+              /* 435 */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1396,6 +1399,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "s390-pv-guest", QEMU_CAPS_S390_PV_GUEST },
     { "virtio-mem-pci", QEMU_CAPS_DEVICE_VIRTIO_MEM_PCI },
     { "virtio-iommu-pci", QEMU_CAPS_DEVICE_VIRTIO_IOMMU_PCI },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
