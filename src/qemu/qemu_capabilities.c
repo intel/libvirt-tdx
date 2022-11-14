@@ -706,6 +706,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
               "blockjob.backing-mask-protocol", /* QEMU_CAPS_BLOCKJOB_BACKING_MASK_PROTOCOL */
               "display-reload", /* QEMU_CAPS_DISPLAY_RELOAD */
               "usb-mtp", /* QEMU_CAPS_DEVICE_USB_MTP */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1395,6 +1396,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "cryptodev-backend-lkcf", QEMU_CAPS_OBJECT_CRYPTO_LKCF },
     { "pvpanic-pci", QEMU_CAPS_DEVICE_PANIC_PCI },
     { "usb-mtp", QEMU_CAPS_DEVICE_USB_MTP },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
