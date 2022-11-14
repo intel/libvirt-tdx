@@ -1513,6 +1513,7 @@ VIR_ENUM_IMPL(virDomainLaunchSecurity,
               "",
               "sev",
               "s390-pv",
+              "tdx",
 );
 
 typedef enum {
@@ -3808,6 +3809,11 @@ virDomainSecDefFree(virDomainSecDef *def)
         g_free(def->data.sev.dh_cert);
         g_free(def->data.sev.session);
         break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        g_free(def->data.tdx.mrconfigid);
+        g_free(def->data.tdx.mrowner);
+        g_free(def->data.tdx.mrownerconfig);
+        g_free(def->data.tdx.QGS);
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
@@ -13452,6 +13458,25 @@ virDomainSEVDefParseXML(virDomainSEVDef *def,
 }
 
 
+static int
+virDomainTDXDefParseXML(virDomainTDXDef *def,
+                        xmlXPathContextPtr ctxt)
+{
+    if (virXPathUIntBase("string(./policy)", ctxt, 16, &def->policy) < 0) {
+        virReportError(VIR_ERR_XML_ERROR, "%s",
+                       _("failed to get launch security policy for launch security type TDX"));
+        return -1;
+    }
+
+    def->mrconfigid = virXPathString("string(./mrConfigId)", ctxt);
+    def->mrowner = virXPathString("string(./mrOwner)", ctxt);
+    def->mrownerconfig = virXPathString("string(./mrOwnerConfig)", ctxt);
+    def->QGS = virXPathString("string(./Quote-Generation-Service)", ctxt);
+
+    return 0;
+}
+
+
 static virDomainSecDef *
 virDomainSecDefParseXML(xmlNodePtr lsecNode,
                         xmlXPathContextPtr ctxt)
@@ -13469,6 +13494,10 @@ virDomainSecDefParseXML(xmlNodePtr lsecNode,
     switch ((virDomainLaunchSecurity) sec->sectype) {
     case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
         if (virDomainSEVDefParseXML(&sec->data.sev, ctxt) < 0)
+            return NULL;
+        break;
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        if (virDomainTDXDefParseXML(&sec->data.tdx, ctxt) < 0)
             return NULL;
         break;
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
@@ -26464,6 +26493,23 @@ virDomainSecDefFormat(virBuffer *buf, virDomainSecDef *sec)
 
         if (sev->session)
             virBufferEscapeString(&childBuf, "<session>%s</session>\n", sev->session);
+
+        break;
+    }
+
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX: {
+        virDomainTDXDef *tdx = &sec->data.tdx;
+
+        virBufferAsprintf(&childBuf, "<policy>0x%04x</policy>\n", tdx->policy);
+
+        if (tdx->mrconfigid)
+            virBufferEscapeString(&childBuf, "<mrConfigId>%s</mrConfigId>\n", tdx->mrconfigid);
+        if (tdx->mrowner)
+            virBufferEscapeString(&childBuf, "<mrOwner>%s</mrOwner>\n", tdx->mrowner);
+        if (tdx->mrownerconfig)
+            virBufferEscapeString(&childBuf, "<mrOwnerConfig>%s</mrOwnerConfig>\n", tdx->mrownerconfig);
+        if (tdx->QGS)
+            virBufferEscapeString(&childBuf, "<Quote-Generation-Service>%s</Quote-Generation-Service>\n", tdx->QGS);
 
         break;
     }

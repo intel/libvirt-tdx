@@ -210,6 +210,8 @@ typedef struct _virDomainResourceDef virDomainResourceDef;
 
 typedef struct _virDomainSEVDef virDomainSEVDef;
 
+typedef struct _virDomainTDXDef virDomainTDXDef;
+
 typedef struct _virDomainSecDef virDomainSecDef;
 
 typedef struct _virDomainShmemDef virDomainShmemDef;
