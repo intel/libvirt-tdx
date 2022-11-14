@@ -501,6 +501,9 @@
             <value>s390-pv</value>
           </attribute>
         </group>
+        <group>
+          <ref name="launchSecurityTDX"/>
+        </group>
       </choice>
     </element>
   </define>
@@ -540,6 +543,37 @@
       </optional>
       <optional>
         <element name="session">
+          <data type="string"/>
+        </element>
+      </optional>
+    </interleave>
+  </define>
+
+  <define name="launchSecurityTDX">
+    <attribute name="type">
+      <value>tdx</value>
+    </attribute>
+    <interleave>
+      <element name="policy">
+        <ref name="hexuint"/>
+      </element>
+      <optional>
+        <element name="mrConfigId">
+          <data type="string"/>
+        </element>
+      </optional>
+      <optional>
+        <element name="mrOwner">
+          <data type="string"/>
+        </element>
+      </optional>
+      <optional>
+        <element name="mrOwnerConfig">
+          <data type="string"/>
+        </element>
+      </optional>
+      <optional>
+        <element name="Quote-Generation-Service">
           <data type="string"/>
         </element>
       </optional>
