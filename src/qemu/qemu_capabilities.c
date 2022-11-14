@@ -732,6 +732,7 @@ VIR_ENUM_IMPL(virQEMUCaps,
 
               /* 475 */
               "virtio-scsi.iothread-mapping", /* QEMU_CAPS_VIRTIO_SCSI_IOTHREAD_MAPPING */
+              "tdx-guest", /* QEMU_CAPS_TDX_GUEST */
     );
 
 
@@ -1420,6 +1421,7 @@ struct virQEMUCapsStringFlags virQEMUCapsObjectTypes[] = {
     { "sev-snp-guest", QEMU_CAPS_SEV_SNP_GUEST },
     { "acpi-erst", QEMU_CAPS_DEVICE_ACPI_ERST },
     { "virtio-mem-ccw", QEMU_CAPS_DEVICE_VIRTIO_MEM_CCW },
+    { "tdx-guest", QEMU_CAPS_TDX_GUEST},
 };
 
 
