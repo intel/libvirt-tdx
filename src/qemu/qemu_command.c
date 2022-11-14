@@ -9746,6 +9746,36 @@ qemuBuildPVCommandLine(virDomainObj *vm, virCommand *cmd)
 
 
 static int
+qemuBuildTDXCommandLine(virDomainObj *vm, virCommand *cmd,
+                        virDomainTDXDef *tdx)
+{
+    g_autoptr(virJSONValue) props = NULL;
+    qemuDomainObjPrivate *priv = vm->privateData;
+    bool sept_ve_disable = tdx->policy & VIR_DOMAIN_TDX_POLICY_SEPT_VE_DISABLE;
+
+    VIR_DEBUG("policy=0x%llx", tdx->policy);
+
+    if (qemuMonitorCreateObjectProps(&props, "tdx-guest", "lsec0",
+                                     "B:debug", !!(tdx->policy & VIR_DOMAIN_TDX_POLICY_DEBUG),
+                                     "S:mrconfigid", tdx->mrconfigid,
+                                     "S:mrowner", tdx->mrowner,
+                                     "S:mrownerconfig", tdx->mrownerconfig,
+                                     NULL) < 0)
+        return -1;
+
+    /* By default, QEMU set sept-ve-disable which is required by linux kernel */
+    if (!sept_ve_disable &&
+        virJSONValueObjectAdd(&props, "b:sept-ve-disable", false, NULL) < 0)
+        return -1;
+
+    if (qemuBuildObjectCommandlineFromJSON(cmd, props, priv->qemuCaps) < 0)
+        return -1;
+
+    return 0;
+}
+
+
+static int
 qemuBuildSecCommandLine(virDomainObj *vm, virCommand *cmd,
                         virDomainSecDef *sec)
 {
@@ -9760,6 +9790,7 @@ qemuBuildSecCommandLine(virDomainObj *vm, virCommand *cmd,
         return qemuBuildPVCommandLine(vm, cmd);
         break;
     case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        return qemuBuildTDXCommandLine(vm, cmd, &sec->data.tdx);
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
         virReportEnumRangeError(virDomainLaunchSecurity, sec->sectype);

@@ -2880,6 +2880,11 @@ struct _virDomainTDXDef {
     char *mrownerconfig;
 };
 
+#define VIR_DOMAIN_TDX_POLICY_DEBUG              0x1
+#define VIR_DOMAIN_TDX_POLICY_SEPT_VE_DISABLE    0x10000000
+#define VIR_DOMAIN_TDX_POLICY_ALLOWED_MASK       (VIR_DOMAIN_TDX_POLICY_DEBUG | \
+                                                  VIR_DOMAIN_TDX_POLICY_SEPT_VE_DISABLE)
+
 struct _virDomainSecDef {
     virDomainLaunchSecurity sectype;
     union {
