@@ -304,6 +304,9 @@
         <ref name="s390-pv"/>
       </optional>
       <optional>
+        <ref name="tdx"/>
+      </optional>
+      <optional>
         <ref name="sev"/>
       </optional>
       <optional>
@@ -348,6 +351,12 @@
 
   <define name="s390-pv">
     <element name="s390-pv">
+      <ref name="supported"/>
+    </element>
+  </define>
+
+  <define name="tdx">
+    <element name="tdx">
       <ref name="supported"/>
     </element>
   </define>
