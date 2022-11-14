@@ -2578,6 +2578,9 @@ qemuDomainObjPrivateXMLFormat(virBuffer *buf,
     if (priv->fakeReboot)
         virBufferAddLit(buf, "<fakereboot/>\n");
 
+    if (priv->hardReboot)
+        virBufferAddLit(buf, "<hardreboot/>\n");
+
     if (priv->qemuDevices && *priv->qemuDevices) {
         char **tmp = priv->qemuDevices;
         virBufferAddLit(buf, "<devices>\n");
@@ -3265,6 +3268,8 @@ qemuDomainObjPrivateXMLParse(xmlXPathContextPtr ctxt,
         return -1;
 
     priv->fakeReboot = virXPathBoolean("boolean(./fakereboot)", ctxt) == 1;
+
+    priv->hardReboot = virXPathBoolean("boolean(./hardreboot)", ctxt) == 1;
 
     if ((n = virXPathNodeSet("./devices/device", ctxt, &nodes)) < 0) {
         virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
@@ -7599,6 +7604,19 @@ qemuDomainSetFakeReboot(virDomainObj *vm,
         return;
 
     priv->fakeReboot = value;
+    qemuDomainSaveStatus(vm);
+}
+
+void
+qemuDomainSetHardReboot(virDomainObj *vm,
+                        bool value)
+{
+    qemuDomainObjPrivate *priv = vm->privateData;
+
+    if (priv->hardReboot == value)
+        return;
+
+    priv->hardReboot = value;
     qemuDomainSaveStatus(vm);
 }
 

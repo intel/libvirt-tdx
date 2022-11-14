@@ -13498,7 +13498,7 @@ static int
 virDomainTDXDefParseXML(virDomainTDXDef *def,
                         xmlXPathContextPtr ctxt)
 {
-    unsigned long policy;
+    unsigned long long policy;
 
     if (virXPathULongLongBase("string(./policy)", ctxt, 16, &policy) < 0) {
         virReportError(VIR_ERR_XML_ERROR, "%s",
