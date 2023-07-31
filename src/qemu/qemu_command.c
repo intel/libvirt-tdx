@@ -3324,6 +3324,10 @@ qemuBuildMemoryBackendProps(virJSONValue **backendProps,
 
     props = virJSONValueNewObject();
 
+    if (def->sec &&
+        ((virDomainLaunchSecurity) def->sec->sectype == VIR_DOMAIN_LAUNCH_SECURITY_TDX))
+        virJSONValueObjectAdd(&props, "b:private", true, NULL);
+
     if (mem->model == VIR_DOMAIN_MEMORY_MODEL_SGX_EPC) {
         backendType = "memory-backend-epc";
         if (!priv->memPrealloc)
