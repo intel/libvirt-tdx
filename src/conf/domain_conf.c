@@ -18096,6 +18096,16 @@ virDomainDefParseMemory(virDomainDef *def,
         VIR_FREE(tmp);
     }
 
+    tmp = virXPathString("string(./memoryBacking/type/@mode)", ctxt);
+    if (tmp) {
+        if ((def->mem.type = virDomainMemoryTypeTypeFromString(tmp)) <= 0) {
+            virReportError(VIR_ERR_CONFIG_UNSUPPORTED,
+                           _("unknown memoryBacking/type/mode '%1$s'"), tmp);
+            return -1;
+        }
+        VIR_FREE(tmp);
+    }
+
     tmp = virXPathString("string(./memoryBacking/allocation/@mode)", ctxt);
     if (tmp) {
         if ((def->mem.allocation = virDomainMemoryAllocationTypeFromString(tmp)) <= 0) {

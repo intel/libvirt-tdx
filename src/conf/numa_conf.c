@@ -60,6 +60,12 @@ VIR_ENUM_IMPL(virDomainMemoryAccess,
               "private",
 );
 
+VIR_ENUM_IMPL(virDomainMemoryType,
+              VIR_DOMAIN_MEMORY_TYPE_LAST,
+              "default",
+              "private",
+);
+
 VIR_ENUM_IMPL(virNumaCacheAssociativity,
               VIR_NUMA_CACHE_ASSOCIATIVITY_LAST,
               "none",

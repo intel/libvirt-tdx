@@ -2845,6 +2845,7 @@ struct _virDomainMemtune {
 
     int source; /* enum virDomainMemorySource */
     int access; /* enum virDomainMemoryAccess */
+    int type; /* enum virDomainMemoryType */
     int allocation; /* enum virDomainMemoryAllocation */
     unsigned int allocation_threads;
 

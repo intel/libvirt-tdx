@@ -51,6 +51,14 @@ typedef enum {
 VIR_ENUM_DECL(virDomainMemoryAccess);
 
 typedef enum {
+    VIR_DOMAIN_MEMORY_TYPE_DEFAULT = 0, /* No memory type defined */
+    VIR_DOMAIN_MEMORY_TYPE_PRIVATE, /* Memory is private memory (gmem) */
+
+    VIR_DOMAIN_MEMORY_TYPE_LAST,
+} virDomainMemoryType;
+VIR_ENUM_DECL(virDomainMemoryType);
+
+typedef enum {
     VIR_NUMA_CACHE_ASSOCIATIVITY_NONE,    /* No associativity */
     VIR_NUMA_CACHE_ASSOCIATIVITY_DIRECT,  /* Direct mapped cache */
     VIR_NUMA_CACHE_ASSOCIATIVITY_FULL,    /* Fully associative cache */

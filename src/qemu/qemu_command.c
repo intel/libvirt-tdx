@@ -3116,6 +3116,21 @@ qemuBuildMemoryBackendPropsShare(virJSONValue *props,
     return 0;
 }
 
+static int
+qemuBuildMemoryBackendPropsType(virJSONValue *props,
+                                virDomainMemoryType memType)
+{
+    switch (memType) {
+    case VIR_DOMAIN_MEMORY_TYPE_PRIVATE:
+        return virJSONValueObjectAdd(&props, "b:private", true, NULL);
+
+    case VIR_DOMAIN_MEMORY_TYPE_DEFAULT:
+    case VIR_DOMAIN_MEMORY_TYPE_LAST:
+        break;
+    }
+
+    return 0;
+}
 
 static int
 qemuBuildMemoryGetDefaultPagesize(virQEMUDriverConfig *cfg,
@@ -3431,6 +3446,9 @@ qemuBuildMemoryBackendProps(virJSONValue **backendProps,
     } else {
         backendType = "memory-backend-ram";
     }
+
+    if (qemuBuildMemoryBackendPropsType(props, def->mem.type) < 0)
+        return -1;
 
     /* This is a terrible hack, but unfortunately there is no better way.
      * The replacement for '-m X' argument is not simple '-machine

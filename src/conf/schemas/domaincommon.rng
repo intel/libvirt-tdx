@@ -809,6 +809,15 @@
               </element>
             </optional>
             <optional>
+              <element name="type">
+                <attribute name="mode">
+                  <choice>
+                    <value>private</value>
+                  </choice>
+                </attribute>
+              </element>
+            </optional>
+            <optional>
               <element name="allocation">
                 <optional>
                   <attribute name="mode">
