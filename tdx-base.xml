@@ -1,0 +1,72 @@
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>TestVM</name>
+  <uuid>01234567-2022-2023-1234-123456789abc</uuid>
+  <memory unit='KiB'>4194304</memory>
+  <memoryBacking>
+    <source type='anonymous'/>
+    <type mode='private'/>
+  </memoryBacking>
+  <vcpu placement='static'>4</vcpu>
+  <os>
+    <type arch='x86_64' machine="q35">hvm</type>
+    <loader>OVMF.fd HERE</loader>
+    <boot dev='hd'/>
+    <kernel>guest kernel path HERE</kernel>
+    <cmdline>guest kernel parameter HERE</cmdline>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+    <ioapic driver='qemu'/>
+  </features>
+  <cpu mode="host-passthrough" check="none" migratable="on">
+    <topology sockets="1" dies="1" cores="4" threads="1"/>
+  </cpu>
+  <clock offset='utc'>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enable='no'/>
+    <suspend-to-disk enable='no'/>
+  </pm>
+  <cpu mode='host-passthrough'>
+    <topology sockets='1' cores='4' threads='1'/>
+  </cpu>
+  <iothreads>1</iothreads>
+  <iothreadids>
+    <iothread id='1'/>
+  </iothreadids>
+  <devices>
+    <emulator>qemu path HERE</emulator>
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2' io='native' cache='none' iothread='1'/>
+      <source file='disk image path HERE'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <interface type="user">
+      <model type="virtio"/>
+    </interface>
+    <channel type='unix'>
+      <source mode='bind'/>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+    <memballoon model='none'/>
+  </devices>
+  <allowReboot value='no'/>
+  <launchSecurity type='tdx'>
+    <policy>0x10000000</policy>
+  </launchSecurity>
+  <qemu:commandline>
+    <qemu:arg value="-cpu"/>
+    <qemu:arg value="host,-kvm-steal-time,pmu=off,-intel-pt"/>
+    <qemu:arg value="-chardev"/>
+    <qemu:arg value="file,id=serial1,path=/tmp/td-guest-hvc.log"/>
+    <qemu:arg value="-device"/>
+    <qemu:arg value="virtio-serial,addr=1.6"/>
+    <qemu:arg value="-device"/>
+    <qemu:arg value="virtconsole,chardev=serial1"/>
+  </qemu:commandline>
+</domain>
