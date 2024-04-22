@@ -43,7 +43,8 @@ VIR_ENUM_IMPL(virHostValidateCPUFlag,
               "svm",
               "sie",
               "158",
-              "sev");
+              "sev",
+              "tdx_host_platform");
 
 static bool quiet;
 
@@ -471,6 +472,7 @@ int virHostValidateSecureGuests(const char *hvname,
     g_autoptr(virBitmap) flags = NULL;
     bool hasFac158 = false;
     bool hasAMDSev = false;
+    bool hasIntelTDX = false;
     virArch arch = virArchFromHost();
     g_autofree char *cmdline = NULL;
     static const char *kIBMValues[] = {"y", "Y", "on", "ON", "oN", "On", "1"};
@@ -482,6 +484,8 @@ int virHostValidateSecureGuests(const char *hvname,
         hasFac158 = true;
     else if (flags && virBitmapIsBitSet(flags, VIR_HOST_VALIDATE_CPU_FLAG_SEV))
         hasAMDSev = true;
+    else if (flags && virBitmapIsBitSet(flags, VIR_HOST_VALIDATE_CPU_FLAG_TDX))
+        hasIntelTDX = true;
 
     virHostMsgCheck(hvname, "%s", _("for secure guest support"));
     if (ARCH_IS_S390(arch)) {
@@ -539,6 +543,22 @@ int virHostValidateSecureGuests(const char *hvname,
                            "disabled in firmware.");
             return VIR_HOST_VALIDATE_FAILURE(level);
         }
+    } else if (hasIntelTDX) {
+        if (virFileReadValueString(&mod_value, "/sys/module/kvm_intel/parameters/tdx") < 0) {
+            virHostMsgFail(level, "Intel Trust Domain Extentions not "
+                                  "supported by the currently used kernel");
+            return VIR_HOST_VALIDATE_FAILURE(level);
+        }
+
+        if (mod_value[0] != 'Y') {
+            virHostMsgFail(level,
+                           "Intel Trust Domain Extentions appears to be "
+                           "disabled in kernel. Add kvm_intel.tdx=Y "
+                           "to the kernel cmdline arguments");
+            return VIR_HOST_VALIDATE_FAILURE(level);
+        }
+        virHostMsgPass();
+        return 1;
     }
 
     virHostMsgFail(level,
