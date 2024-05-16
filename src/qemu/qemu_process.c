@@ -441,6 +441,75 @@ qemuProcessHandleReset(qemuMonitor *mon G_GNUC_UNUSED,
 }
 
 
+static void
+qemuProcessSecFakeReboot(void *opaque)
+{
+    virDomainObj *vm = opaque;
+    qemuDomainObjPrivate *priv = vm->privateData;
+    virQEMUDriver *driver = priv->driver;
+    unsigned int stopFlags = 0;
+    virObjectEvent *event = NULL;
+    virObjectEvent * event2 = NULL;
+
+    VIR_DEBUG("Handle secure guest reboot: destroy phase");
+
+    virObjectLock(vm);
+    if (qemuProcessBeginStopJob(vm, VIR_JOB_DESTROY, 0) < 0)
+        goto cleanup;
+
+    if (virDomainObjCheckActive(vm) < 0) {
+        virDomainObjEndJob(vm);
+        goto cleanup;
+    }
+
+    if (vm->job->asyncJob == VIR_ASYNC_JOB_MIGRATION_IN)
+        stopFlags |= VIR_QEMU_PROCESS_STOP_MIGRATED;
+
+    qemuProcessStop(driver, vm, VIR_DOMAIN_SHUTOFF_DESTROYED,
+                    VIR_ASYNC_JOB_NONE, stopFlags);
+    virDomainAuditStop(vm, "destroyed");
+
+    event = virDomainEventLifecycleNewFromObj(vm,
+                                     VIR_DOMAIN_EVENT_STOPPED,
+                                     VIR_DOMAIN_EVENT_STOPPED_DESTROYED);
+
+    virObjectEventStateQueue(driver->domainEventState, event);
+    /* skip remove inactive domain from active list */
+    virDomainObjEndJob(vm);
+
+    VIR_DEBUG("Handle secure guest reboot: boot phase");
+
+    if (qemuProcessBeginJob(vm, VIR_DOMAIN_JOB_OPERATION_START, 0) < 0) {
+        qemuDomainRemoveInactive(driver, vm, 0, false);
+        goto cleanup;
+    }
+
+    if (qemuProcessStart(NULL, driver, vm, NULL, VIR_ASYNC_JOB_START,
+                         NULL, -1, NULL, NULL,
+                         VIR_NETDEV_VPORT_PROFILE_OP_CREATE,
+                         0) < 0) {
+        virDomainAuditStart(vm, "booted", false);
+        qemuDomainRemoveInactive(driver, vm, 0, false);
+        goto endjob;
+    }
+
+    virDomainAuditStart(vm, "booted", true);
+    event2 = virDomainEventLifecycleNewFromObj(vm,
+                                     VIR_DOMAIN_EVENT_STARTED,
+                                     VIR_DOMAIN_EVENT_STARTED_BOOTED);
+    virObjectEventStateQueue(driver->domainEventState, event2);
+
+    qemuDomainSaveStatus(vm);
+
+ endjob:
+    qemuProcessEndJob(vm);
+
+ cleanup:
+    qemuDomainSetFakeReboot(vm, false);
+    virDomainObjEndAPI(&vm);
+}
+
+
 /*
  * Since we have the '-no-shutdown' flag set, the
  * QEMU process will currently have guest OS shutdown
@@ -459,6 +528,11 @@ qemuProcessFakeReboot(void *opaque)
     int ret = -1, rc;
 
     VIR_DEBUG("vm=%p", vm);
+
+    if (vm->def->sec &&
+        vm->def->sec->sectype == VIR_DOMAIN_LAUNCH_SECURITY_TDX)
+        return qemuProcessSecFakeReboot(opaque);
+
     virObjectLock(vm);
     if (virDomainObjBeginJob(vm, VIR_JOB_MODIFY) < 0)
         goto cleanup;
