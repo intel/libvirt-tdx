@@ -591,7 +591,113 @@
           <data type="string"/>
         </element>
       </optional>
+      <optional>
+        <element name="quoteGenerationService">
+          <ref name="SocketAddress"/>
+        </element>
+      </optional>
     </interleave>
+  </define>
+
+  <define name="SocketAddress">
+    <element name="SocketAddress">
+      <choice>
+        <group>
+          <ref name="InetSocketAddress"/>
+        </group>
+        <group>
+          <ref name="UnixSocketAddress"/>
+        </group>
+        <group>
+          <ref name="VsockSocketAddress"/>
+        </group>
+        <group>
+          <ref name="FdSocketAddress"/>
+        </group>
+      </choice>
+    </element>
+  </define>
+
+  <define name="InetSocketAddress">
+    <attribute name="type">
+      <value>inet</value>
+    </attribute>
+    <attribute name="host">
+      <data type="string"/>
+    </attribute>
+    <attribute name="port">
+      <data type="string"/>
+    </attribute>
+    <optional>
+      <attribute name="numeric">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="to">
+        <ref name="uint16"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="ipv4">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="ipv6">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="keep_alive">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="mptcp">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+  </define>
+
+  <define name="UnixSocketAddress">
+    <attribute name="type">
+      <value>unix</value>
+    </attribute>
+    <attribute name="path">
+      <data type="string"/>
+    </attribute>
+    <optional>
+      <attribute name="abstract">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+    <optional>
+      <attribute name="tight">
+        <ref name="virYesNo"/>
+      </attribute>
+    </optional>
+  </define>
+
+  <define name="VsockSocketAddress">
+    <attribute name="type">
+      <value>vsock</value>
+    </attribute>
+    <attribute name="cid">
+      <data type="string"/>
+    </attribute>
+    <attribute name="port">
+      <data type="string"/>
+    </attribute>
+  </define>
+
+  <define name="FdSocketAddress">
+    <attribute name="type">
+      <value>fd</value>
+    </attribute>
+    <attribute name="str">
+      <data type="string"/>
+    </attribute>
   </define>
 
   <!--

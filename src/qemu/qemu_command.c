@@ -9745,21 +9745,127 @@ qemuBuildPVCommandLine(virDomainObj *vm, virCommand *cmd)
 }
 
 
+static virJSONValue *
+qemuJSONBuildInetSocketAddress(const InetSocketAddress *inet)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+    g_autoptr(virJSONValue) data = NULL;
+
+    if (virJSONValueObjectAdd(&addr,
+                              "s:type", "inet",
+                              "s:host", inet->host,
+                              "s:port", inet->port,
+                              "T:numeric", inet->numeric,
+                              "p:to", inet->to,
+                              "T:ipv4", inet->ipv4,
+                              "T:ipv6", inet->ipv6,
+                              "T:keep-alive", inet->keep_alive,
+                              "T:mptcp", inet->mptcp,
+                              NULL) < 0)
+        return NULL;
+
+    return g_steal_pointer(&addr);
+}
+
+
+static virJSONValue *
+qemuJSONBuildUnixSocketAddress(const UnixSocketAddress *Unix)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+    g_autoptr(virJSONValue) data = NULL;
+
+    if (virJSONValueObjectAdd(&addr,
+                              "s:type", "unix",
+                              "s:path", Unix->path,
+                              "T:abstract", Unix->abstract,
+                              "T:tight", Unix->tight,
+                              NULL) < 0)
+        return NULL;
+
+    return g_steal_pointer(&addr);
+}
+
+
+static virJSONValue *
+qemuJSONBuildVsockSocketAddress(const VsockSocketAddress *vsock)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+    g_autoptr(virJSONValue) data = NULL;
+
+    if (virJSONValueObjectAdd(&addr,
+                              "s:type", "vsock",
+                              "s:cid", vsock->cid,
+                              "s:port", vsock->port,
+                              NULL) < 0)
+        return NULL;
+
+    return g_steal_pointer(&addr);
+}
+
+
+static virJSONValue *
+qemuJSONBuildFdSocketAddress(const FdSocketAddress *fd)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+    g_autoptr(virJSONValue) data = NULL;
+
+    if (virJSONValueObjectAdd(&addr,
+                              "s:type", "fd",
+                              "s:str", fd->str,
+                              NULL) < 0)
+        return NULL;
+
+    return g_steal_pointer(&addr);
+}
+
+
+static virJSONValue *
+qemuBuildTDXQGSCommandLine(virDomainTDXDef *tdx)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+
+    switch ((virDomainSocketAddress) tdx->qgs_sa.type) {
+    case VIR_DOMAIN_SOCKET_ADDRESS_INET:
+        addr = qemuJSONBuildInetSocketAddress(&tdx->qgs_sa.u.inet);
+        break;
+    case VIR_DOMAIN_SOCKET_ADDRESS_UNIX:
+        addr = qemuJSONBuildUnixSocketAddress(&tdx->qgs_sa.u.Unix);
+        break;
+    case VIR_DOMAIN_SOCKET_ADDRESS_VSOCK:
+        addr = qemuJSONBuildVsockSocketAddress(&tdx->qgs_sa.u.vsock);
+        break;
+    case VIR_DOMAIN_SOCKET_ADDRESS_FD:
+        addr = qemuJSONBuildFdSocketAddress(&tdx->qgs_sa.u.fd);
+        break;
+    case VIR_DOMAIN_SOCKET_ADDRESS_NONE:
+    case VIR_DOMAIN_SOCKET_ADDRESS_LAST:
+    default:
+        return NULL;
+    }
+
+    return g_steal_pointer(&addr);
+}
+
+
 static int
 qemuBuildTDXCommandLine(virDomainObj *vm, virCommand *cmd,
                         virDomainTDXDef *tdx)
 {
+    g_autoptr(virJSONValue) addr = NULL;
     g_autoptr(virJSONValue) props = NULL;
     qemuDomainObjPrivate *priv = vm->privateData;
     bool sept_ve_disable = tdx->policy & VIR_DOMAIN_TDX_POLICY_SEPT_VE_DISABLE;
 
     VIR_DEBUG("policy=0x%llx", tdx->policy);
 
+    addr = qemuBuildTDXQGSCommandLine(tdx);
+
     if (qemuMonitorCreateObjectProps(&props, "tdx-guest", "lsec0",
                                      "B:debug", !!(tdx->policy & VIR_DOMAIN_TDX_POLICY_DEBUG),
                                      "S:mrconfigid", tdx->mrconfigid,
                                      "S:mrowner", tdx->mrowner,
                                      "S:mrownerconfig", tdx->mrownerconfig,
+                                     "A:quote-generation-socket", &addr,
                                      NULL) < 0)
         return -1;
 
