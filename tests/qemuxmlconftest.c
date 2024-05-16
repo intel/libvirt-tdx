@@ -2848,6 +2848,30 @@ mymain(void)
                                   QEMU_CAPS_SEV_GUEST,
                                   QEMU_CAPS_LAST);
 
+    DO_TEST_CAPS_ARCH_LATEST_FULL("launch-security-tdx-qgs-inet",
+                                  "x86_64",
+                                  ARG_QEMU_CAPS,
+                                  QEMU_CAPS_TDX_GUEST,
+                                  QEMU_CAPS_LAST);
+
+    DO_TEST_CAPS_ARCH_LATEST_FULL("launch-security-tdx-qgs-unix",
+                                  "x86_64",
+                                  ARG_QEMU_CAPS,
+                                  QEMU_CAPS_TDX_GUEST,
+                                  QEMU_CAPS_LAST);
+
+    DO_TEST_CAPS_ARCH_LATEST_FULL("launch-security-tdx-qgs-vsock",
+                                  "x86_64",
+                                  ARG_QEMU_CAPS,
+                                  QEMU_CAPS_TDX_GUEST,
+                                  QEMU_CAPS_LAST);
+
+    DO_TEST_CAPS_ARCH_LATEST_FULL("launch-security-tdx-qgs-fd",
+                                  "x86_64",
+                                  ARG_QEMU_CAPS,
+                                  QEMU_CAPS_TDX_GUEST,
+                                  QEMU_CAPS_LAST);
+
     DO_TEST_CAPS_ARCH_LATEST("launch-security-s390-pv", "s390x");
 
     DO_TEST_CAPS_LATEST("vhost-user-fs-fd-memory");
