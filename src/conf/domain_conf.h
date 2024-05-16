@@ -3005,6 +3005,8 @@ struct _virDomainTDXDef {
     char *mrconfigid;
     char *mrowner;
     char *mrownerconfig;
+    bool haveQGS;
+    char *qgs_unix_path;
 };
 
 
