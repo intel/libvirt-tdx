@@ -3954,6 +3954,7 @@ virDomainSecDefFree(virDomainSecDef *def)
         g_free(def->data.tdx.mrconfigid);
         g_free(def->data.tdx.mrowner);
         g_free(def->data.tdx.mrownerconfig);
+        g_free(def->data.tdx.qgs_unix_path);
         break;
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
@@ -14181,6 +14182,33 @@ virDomainSEVSNPDefParseXML(virDomainSEVSNPDef *def,
 
 
 static int
+virDomainTDXQGSDefParseXML(virDomainTDXDef *def, xmlXPathContextPtr ctxt)
+{
+    g_autofree xmlNodePtr *nodes = NULL;
+    xmlNodePtr node;
+    int n;
+
+    if ((n = virXPathNodeSet("./quoteGenerationSocket", ctxt, &nodes)) < 0)
+        return -1;
+
+    if (!n)
+        return 0;
+
+    if (n > 1) {
+        virReportError(VIR_ERR_XML_ERROR, "%s",
+                       _("only a single QGS element is supported"));
+        return -1;
+    }
+    node = nodes[0];
+
+    def->haveQGS = true;
+    def->qgs_unix_path = virXMLPropString(node, "path");
+
+    return 0;
+}
+
+
+static int
 virDomainTDXDefParseXML(virDomainTDXDef *def,
                         xmlXPathContextPtr ctxt)
 {
@@ -14199,7 +14227,7 @@ virDomainTDXDefParseXML(virDomainTDXDef *def,
     def->mrowner = virXPathString("string(./mrOwner)", ctxt);
     def->mrownerconfig = virXPathString("string(./mrOwnerConfig)", ctxt);
 
-    return 0;
+    return virDomainTDXQGSDefParseXML(def, ctxt);
 }
 
 
@@ -27639,6 +27667,11 @@ virDomainTDXDefFormat(virBuffer *childBuf, virDomainTDXDef *def)
     virBufferEscapeString(childBuf, "<mrConfigId>%s</mrConfigId>\n", def->mrconfigid);
     virBufferEscapeString(childBuf, "<mrOwner>%s</mrOwner>\n", def->mrowner);
     virBufferEscapeString(childBuf, "<mrOwnerConfig>%s</mrOwnerConfig>\n", def->mrownerconfig);
+    if (def->haveQGS) {
+        virBufferAddLit(childBuf, "<quoteGenerationSocket");
+        virBufferEscapeString(childBuf, " path='%s'", def->qgs_unix_path);
+        virBufferAddLit(childBuf, "/>\n");
+    }
 }
 
 
