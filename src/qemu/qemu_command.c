@@ -9789,18 +9789,43 @@ qemuBuildPVCommandLine(virCommand *cmd)
 }
 
 
+static virJSONValue *
+qemuBuildTDXQGSCommandLine(virDomainTDXDef *tdx)
+{
+    g_autoptr(virJSONValue) addr = NULL;
+    const char *path;
+
+    if (!tdx->haveQGS)
+        return NULL;
+
+    path = tdx->qgs_unix_path ? : QGS_UNIX_SOCKET_FILE;
+
+    if (virJSONValueObjectAdd(&addr,
+                              "s:type", "unix",
+                              "s:path", path,
+                              NULL) < 0)
+        return NULL;
+
+    return g_steal_pointer(&addr);
+}
+
+
 static int
 qemuBuildTDXCommandLine(virCommand *cmd, virDomainTDXDef *tdx)
 {
+    g_autoptr(virJSONValue) addr = NULL;
     g_autoptr(virJSONValue) props = NULL;
 
     if (tdx->havePolicy)
         VIR_DEBUG("policy=0x%llx", tdx->policy);
 
+    addr = qemuBuildTDXQGSCommandLine(tdx);
+
     if (qemuMonitorCreateObjectProps(&props, "tdx-guest", "lsec0",
                                      "S:mrconfigid", tdx->mrconfigid,
                                      "S:mrowner", tdx->mrowner,
                                      "S:mrownerconfig", tdx->mrownerconfig,
+                                     "A:quote-generation-socket", &addr,
                                      NULL) < 0)
         return -1;
 
