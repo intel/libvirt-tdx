@@ -1913,10 +1913,13 @@ virDomainDefValidateIOThreads(const virDomainDef *def)
     } \
 }
 
+#define SHA384_DIGEST_SIZE  48
+
 static int
 virDomainDefLaunchSecurityValidate(const virDomainDef *def)
 {
     virDomainSEVSNPDef *sev_snp;
+    virDomainTDXDef *tdx;
 
     if (!def->sec)
         return 0;
@@ -1931,10 +1934,17 @@ virDomainDefLaunchSecurityValidate(const virDomainDef *def)
         CHECK_BASE64_LEN(sev_snp->host_data, "hostData", 32);
         break;
 
+    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
+        tdx = &def->sec->data.tdx;
+
+        CHECK_BASE64_LEN(tdx->mrconfigid, "mrConfigId", SHA384_DIGEST_SIZE);
+        CHECK_BASE64_LEN(tdx->mrowner, "mrOwner", SHA384_DIGEST_SIZE);
+        CHECK_BASE64_LEN(tdx->mrownerconfig, "mrOwnerConfig", SHA384_DIGEST_SIZE);
+        break;
+
     case VIR_DOMAIN_LAUNCH_SECURITY_NONE:
     case VIR_DOMAIN_LAUNCH_SECURITY_SEV:
     case VIR_DOMAIN_LAUNCH_SECURITY_PV:
-    case VIR_DOMAIN_LAUNCH_SECURITY_TDX:
     case VIR_DOMAIN_LAUNCH_SECURITY_LAST:
         break;
     }
