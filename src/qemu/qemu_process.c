@@ -509,8 +509,6 @@ qemuProcessHardReboot(void *opaque)
     qemuDomainObjPrivate *priv = vm->privateData;
     virQEMUDriver *driver = priv->driver;
     unsigned int stopFlags = 0;
-    virObjectEvent *event = NULL;
-    virObjectEvent * event2 = NULL;
 
     VIR_DEBUG("Handle hard reboot: destroy phase");
 
@@ -535,11 +533,6 @@ qemuProcessHardReboot(void *opaque)
                     VIR_ASYNC_JOB_NONE, stopFlags);
     virDomainAuditStop(vm, "destroyed");
 
-    event = virDomainEventLifecycleNewFromObj(vm,
-                                     VIR_DOMAIN_EVENT_STOPPED,
-                                     VIR_DOMAIN_EVENT_STOPPED_DESTROYED);
-
-    virObjectEventStateQueue(driver->domainEventState, event);
     /* skip remove inactive domain from active list */
     virDomainObjEndJob(vm);
 
@@ -562,10 +555,6 @@ qemuProcessHardReboot(void *opaque)
     }
 
     virDomainAuditStart(vm, "booted", true);
-    event2 = virDomainEventLifecycleNewFromObj(vm,
-                                     VIR_DOMAIN_EVENT_STARTED,
-                                     VIR_DOMAIN_EVENT_STARTED_BOOTED);
-    virObjectEventStateQueue(driver->domainEventState, event2);
 
     qemuProcessEndJob(vm);
 
@@ -671,7 +660,7 @@ qemuProcessHandleShutdown(qemuMonitor *mon G_GNUC_UNUSED,
 
     /* In case of fake reboot qemu shutdown state is transient so don't
      * change domain state nor send events. */
-    if (!priv->fakeReboot &&
+    if (!priv->hardReboot && !priv->fakeReboot &&
         vm->def->onPoweroff != VIR_DOMAIN_LIFECYCLE_ACTION_RESTART) {
         VIR_DEBUG("Transitioned guest %s to shutdown state",
                   vm->def->name);
@@ -808,9 +797,11 @@ qemuProcessHandleResume(qemuMonitor *mon G_GNUC_UNUSED,
                 reason = VIR_DOMAIN_RUNNING_POSTCOPY;
         }
         virDomainObjSetState(vm, VIR_DOMAIN_RUNNING, reason);
-        event = virDomainEventLifecycleNewFromObj(vm,
-                                                  VIR_DOMAIN_EVENT_RESUMED,
-                                                  eventDetail);
+
+	if (!priv->hardReboot)
+            event = virDomainEventLifecycleNewFromObj(vm,
+                                                      VIR_DOMAIN_EVENT_RESUMED,
+                                                      eventDetail);
         qemuDomainSaveStatus(vm);
     }
 
