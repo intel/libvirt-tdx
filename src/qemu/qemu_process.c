@@ -559,6 +559,7 @@ qemuProcessHardReboot(void *opaque)
     qemuProcessEndJob(vm);
 
  cleanup:
+    qemuDomainSetHardReboot(vm, false);
     virDomainObjEndAPI(&vm);
 }
 
