@@ -70,7 +70,8 @@ VIR_ENUM_IMPL(virshDomainEventStarted,
               N_("Migrated"),
               N_("Restored"),
               N_("Snapshot"),
-              N_("Event wakeup"));
+              N_("Event wakeup"),
+              N_("Recreation"));
 
 VIR_ENUM_DECL(virshDomainEventSuspended);
 VIR_ENUM_IMPL(virshDomainEventSuspended,
@@ -103,7 +104,8 @@ VIR_ENUM_IMPL(virshDomainEventStopped,
               N_("Migrated"),
               N_("Saved"),
               N_("Failed"),
-              N_("Snapshot"));
+              N_("Snapshot"),
+              N_("Recreation"));
 
 VIR_ENUM_DECL(virshDomainEventShutdown);
 VIR_ENUM_IMPL(virshDomainEventShutdown,
