@@ -191,6 +191,8 @@ typedef enum {
 
 int qemuProcessKill(virDomainObj *vm, unsigned int flags);
 
+int qemuProcessFakeRebootViaRecreate(virDomainObj *vm, bool locked);
+
 void qemuProcessShutdownOrReboot(virDomainObj *vm);
 
 void qemuProcessAutoDestroy(virDomainObj *dom,
